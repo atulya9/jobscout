@@ -27,14 +27,32 @@
     .toolbar .left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .count { color:var(--muted); font-variant-numeric:tabular-nums; }
     .table-wrap { overflow:auto; max-height:calc(100vh - 245px); }
-    table { border-collapse:separate; border-spacing:0; min-width:100%; width:max-content; }
-    th { position:sticky; top:0; z-index:2; background:#f0f3ee; text-align:left; font-size:12px; letter-spacing:.02em; color:#4d5a51; border-bottom:1px solid var(--line); }
-    th, td { padding:8px; border-right:1px solid #edf0ed; border-bottom:1px solid #edf0ed; vertical-align:top; min-width:145px; max-width:360px; }
-    th:first-child, td:first-child { min-width:42px; width:42px; text-align:center; position:sticky; left:0; z-index:1; background:inherit; }
+    table { border-collapse:separate; border-spacing:0; table-layout:fixed; width:max-content; }
+    th { position:sticky; top:0; z-index:2; background:#f0f3ee; text-align:left; font-size:12px; letter-spacing:.02em; color:#4d5a51; border-bottom:1px solid var(--line); overflow:visible; }
+    th, td { padding:8px; border-right:1px solid #edf0ed; border-bottom:1px solid #edf0ed; vertical-align:top; min-width:0; }
+    th .th-label { display:block; padding-right:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    th .th-sort { display:flex; align-items:center; gap:4px; width:100%; margin:0; padding:0 10px 0 0; border:0; background:transparent; font:inherit; color:inherit; letter-spacing:inherit; text-align:left; cursor:pointer; border-radius:6px; }
+    th .th-sort:hover { background:rgba(20,108,67,.08); }
+    th .th-sort .th-label { flex:1 1 auto; padding-right:0; }
+    .sort-ind { flex:0 0 auto; min-width:0.9em; font-size:10px; line-height:1; color:#9aa59c; }
+    th .th-sort[aria-sort="ascending"] .sort-ind, th .th-sort[aria-sort="descending"] .sort-ind { color:var(--green); font-weight:800; }
+    .col-resizer { position:absolute; top:0; right:-3px; width:9px; height:100%; cursor:col-resize; z-index:4; touch-action:none; }
+    .col-resizer::after { content:""; position:absolute; top:6px; bottom:6px; left:3px; width:3px; border-radius:99px; background:transparent; }
+    th:hover .col-resizer::after, .col-resizer:hover::after, body.col-resizing .col-resizer:hover::after { background:#b7c4ba; }
+    body.col-resizing, body.col-resizing * { cursor:col-resize !important; user-select:none !important; }
+    body.col-resizing input, body.col-resizing textarea, body.col-resizing a { pointer-events:none; }
+    th:first-child, td:first-child { width:42px; text-align:center; position:sticky; left:0; z-index:1; background:inherit; }
+    th:first-child { z-index:3; }
     td:first-child { background:white; }
-    input.cell, textarea.cell { width:100%; min-width:128px; border:1px solid transparent; border-radius:6px; padding:6px; background:transparent; font:inherit; color:inherit; resize:vertical; }
+    input.cell, textarea.cell { width:100%; min-width:0; border:1px solid transparent; border-radius:6px; padding:6px; background:transparent; font:inherit; color:inherit; resize:vertical; }
     textarea.cell { min-height:58px; }
+    input.cell { overflow:hidden; text-overflow:ellipsis; }
     input.cell:focus, textarea.cell:focus { outline:none; border-color:#82a88f; background:#fbfffc; box-shadow:0 0 0 3px rgba(20,108,67,.09); }
+    .url-cell { display:flex; gap:4px; align-items:flex-start; min-width:0; }
+    .url-cell .cell { flex:1 1 auto; }
+    .url-open { flex:0 0 auto; align-self:center; color:var(--green); font-size:12px; font-weight:700; text-decoration:none; padding:5px 7px; border-radius:7px; border:1px solid transparent; }
+    .url-open:hover { background:var(--green-soft); border-color:#c1dfcb; }
+    .url-open[hidden] { display:none; }
     tr.hidden { display:none; }
     footer { padding:10px 32px 26px; color:var(--muted); }
     #status.error { color:#a21b1b; }
@@ -81,8 +99,175 @@
       ['search-sources.csv', 'Sources']
     ];
     const longFields = new Set(['fit_summary','gaps','user_notes','notes','failure_reason','checks_attempted','question','answer','evidence','blocked_sources','change_summary','unsupported_requirements']);
+    const DATE_HEADER = /^(?:.+_(?:at|date)|first_seen|last_seen|last_verified|last_checked|generated_at)$/;
+    const WIDTH_KEY = 'portable-job-search:column-widths';
+    const SORT_KEY = 'portable-job-search:column-sorts';
     const state = { directory: null, current: tables[0][0], data: new Map(), dirty: new Set() };
     const $ = selector => document.querySelector(selector);
+
+    function parseTime(value) {
+      const text = String(value ?? '').trim();
+      if (!text) return null;
+      const ms = /^\d{4}-\d{2}-\d{2}$/.test(text)
+        ? Date.parse(`${text}T23:59:59.999`)
+        : Date.parse(text);
+      return Number.isNaN(ms) ? null : ms;
+    }
+
+    function isBlankRow(row) {
+      return row.every(cell => String(cell ?? '').trim() === '');
+    }
+
+    function sortFor(tableName) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SORT_KEY) || '{}')[tableName];
+        if (saved && typeof saved.header === 'string' && (saved.dir === 'asc' || saved.dir === 'desc')) return saved;
+      } catch { /* ignore broken preference */ }
+      return null;
+    }
+
+    function saveSort(tableName, header, dir) {
+      let all = {};
+      try { all = JSON.parse(localStorage.getItem(SORT_KEY) || '{}'); } catch { all = {}; }
+      if (!header) delete all[tableName];
+      else all[tableName] = { header, dir };
+      localStorage.setItem(SORT_KEY, JSON.stringify(all));
+    }
+
+    function defaultDir(header) {
+      return DATE_HEADER.test(header) ? 'desc' : 'asc';
+    }
+
+    function compareValues(header, left, right) {
+      if (DATE_HEADER.test(header)) {
+        const aTime = parseTime(left);
+        const bTime = parseTime(right);
+        if (aTime !== null && bTime !== null && aTime !== bTime) return aTime - bTime;
+      }
+      const aNum = Number(String(left).replace(/,/g, ''));
+      const bNum = Number(String(right).replace(/,/g, ''));
+      if (/^-?\d/.test(left) && /^-?\d/.test(right) && Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) {
+        return aNum - bNum;
+      }
+      return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: 'base' });
+    }
+
+    function sortRows(name, headers, rows) {
+      const spec = sortFor(name);
+      const column = spec ? headers.indexOf(spec.header) : -1;
+      const dir = spec?.dir === 'desc' ? -1 : 1;
+      return rows
+        .map((row, index) => ({ row, index }))
+        .sort((a, b) => {
+          const aBlank = isBlankRow(a.row);
+          const bBlank = isBlankRow(b.row);
+          if (aBlank !== bBlank) return aBlank ? -1 : 1;
+          if (column < 0) return a.index - b.index;
+          const aText = String(a.row[column] ?? '').trim();
+          const bText = String(b.row[column] ?? '').trim();
+          if (!aText && !bText) return a.index - b.index;
+          if (!aText) return 1;
+          if (!bText) return -1;
+          const cmp = compareValues(spec.header, aText, bText);
+          return cmp ? cmp * dir : a.index - b.index;
+        });
+    }
+
+    function applySort(header) {
+      harvest();
+      const current = sortFor(state.current);
+      if (current?.header === header) saveSort(state.current, header, current.dir === 'asc' ? 'desc' : 'asc');
+      else saveSort(state.current, header, defaultDir(header));
+      renderTable();
+    }
+
+    function defaultWidth(header) {
+      if (!header) return 42;
+      if (/url|path/i.test(header)) return 260;
+      if (longFields.has(header)) return 280;
+      if (DATE_HEADER.test(header)) return 132;
+      if (/_id$/.test(header)) return 200;
+      if (header === 'role') return 240;
+      if (header === 'company') return 150;
+      if (header === 'status' || header === 'verification' || header === 'review_status' || header === 'answer_status') return 120;
+      return 160;
+    }
+
+    function widthsFor(tableName) {
+      try { return JSON.parse(localStorage.getItem(WIDTH_KEY) || '{}')[tableName] || {}; }
+      catch { return {}; }
+    }
+
+    function saveWidth(tableName, header, width) {
+      let all = {};
+      try { all = JSON.parse(localStorage.getItem(WIDTH_KEY) || '{}'); } catch { all = {}; }
+      all[tableName] = { ...(all[tableName] || {}), [header]: width };
+      localStorage.setItem(WIDTH_KEY, JSON.stringify(all));
+    }
+
+    function httpUrlFrom(value) {
+      const text = String(value ?? '').trim();
+      if (!text) return '';
+      const matches = text.match(/https?:\/\/[^\s<>"']+/ig) || [];
+      if (/^https?:\/\//i.test(text)) matches.unshift(text.split(/\s/)[0]);
+      for (const candidate of matches) {
+        try {
+          const url = new URL(candidate);
+          if (url.protocol === 'http:' || url.protocol === 'https:') return url.href;
+        } catch { /* ignore invalid URL text */ }
+      }
+      return '';
+    }
+
+    function bindUrlOpener(input, opener) {
+      const sync = () => {
+        const href = httpUrlFrom(input.value);
+        if (href) { opener.href = href; opener.hidden = false; }
+        else { opener.removeAttribute('href'); opener.hidden = true; }
+      };
+      input.addEventListener('input', sync);
+      sync();
+    }
+
+    function syncTableWidth(grid = $('#grid')) {
+      const total = [...grid.querySelectorAll('col')].reduce((sum, col) => sum + (parseInt(col.style.width, 10) || 0), 0);
+      if (total) grid.style.width = `${total}px`;
+    }
+
+    function enableColumnResize(th, col, tableName, header) {
+      const handle = document.createElement('span');
+      handle.className = 'col-resizer';
+      handle.role = 'separator';
+      handle.ariaOrientation = 'vertical';
+      handle.title = 'Drag to resize column';
+      th.append(handle);
+      handle.addEventListener('pointerdown', event => {
+        if (event.button) return;
+        event.preventDefault();
+        handle.setPointerCapture(event.pointerId);
+        const startX = event.clientX;
+        const startWidth = col.getBoundingClientRect().width;
+        document.body.classList.add('col-resizing');
+        const move = ev => {
+          const width = Math.max(56, Math.round(startWidth + ev.clientX - startX));
+          col.style.width = `${width}px`;
+          syncTableWidth(th.closest('table'));
+        };
+        const stop = ev => {
+          handle.removeEventListener('pointermove', move);
+          handle.removeEventListener('pointerup', stop);
+          handle.removeEventListener('pointercancel', stop);
+          document.body.classList.remove('col-resizing');
+          if (ev.pointerId !== undefined) {
+            try { handle.releasePointerCapture(ev.pointerId); } catch { /* already released */ }
+          }
+          saveWidth(tableName, header, parseInt(col.style.width, 10));
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', stop);
+        handle.addEventListener('pointercancel', stop);
+      });
+    }
 
     function parseCsv(text) {
       const rows = []; let row = [], field = '', quoted = false;
@@ -142,20 +327,68 @@
     function renderTable() {
       const matrix = state.data.get(state.current) || [[]];
       const headers = matrix[0] || [];
+      const savedWidths = widthsFor(state.current);
       const grid = $('#grid'); grid.replaceChildren();
+      const colgroup = document.createElement('colgroup');
+      const selectCol = document.createElement('col');
+      selectCol.style.width = `${savedWidths['✓'] || 42}px`;
+      colgroup.append(selectCol);
+      headers.forEach(header => {
+        const col = document.createElement('col');
+        col.style.width = `${savedWidths[header] || defaultWidth(header)}px`;
+        colgroup.append(col);
+      });
+      grid.append(colgroup);
       const thead = grid.createTHead(); const hrow = thead.insertRow();
-      const selectHead = document.createElement('th'); selectHead.textContent = '✓'; hrow.append(selectHead);
-      headers.forEach(header => { const th = document.createElement('th'); th.textContent = header; hrow.append(th); });
+      const selectHead = document.createElement('th');
+      const selectLabel = document.createElement('span');
+      selectLabel.className = 'th-label'; selectLabel.textContent = '✓';
+      selectHead.append(selectLabel);
+      enableColumnResize(selectHead, selectCol, state.current, '✓');
+      hrow.append(selectHead);
+      const activeSort = sortFor(state.current);
+      headers.forEach((header, index) => {
+        const th = document.createElement('th');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'th-sort';
+        button.title = activeSort?.header === header
+          ? `Sorted ${activeSort.dir === 'desc' ? 'descending' : 'ascending'}. Click to reverse.`
+          : `Sort by ${header}`;
+        if (activeSort?.header === header) button.setAttribute('aria-sort', activeSort.dir === 'desc' ? 'descending' : 'ascending');
+        const label = document.createElement('span');
+        label.className = 'th-label'; label.textContent = header;
+        const mark = document.createElement('span');
+        mark.className = 'sort-ind';
+        mark.textContent = activeSort?.header === header ? (activeSort.dir === 'desc' ? '▼' : '▲') : '↕';
+        button.append(label, mark);
+        button.addEventListener('click', () => applySort(header));
+        th.append(button);
+        enableColumnResize(th, colgroup.children[index + 1], state.current, header);
+        hrow.append(th);
+      });
+      syncTableWidth(grid);
       const body = grid.createTBody();
-      matrix.slice(1).forEach((row, rowIndex) => {
-        const tr = body.insertRow(); tr.dataset.index = rowIndex + 1;
+      const bodyRows = matrix.slice(1);
+      sortRows(state.current, headers, bodyRows).forEach(({ row, index }) => {
+        const tr = body.insertRow(); tr.dataset.index = index + 1;
         const selection = tr.insertCell(); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'row-select'; selection.append(checkbox);
         headers.forEach((header, columnIndex) => {
           const cell = tr.insertCell();
           const input = document.createElement(longFields.has(header) ? 'textarea' : 'input');
           input.className = 'cell'; input.value = row[columnIndex] ?? ''; input.dataset.column = columnIndex;
           input.addEventListener('input', () => { state.dirty.add(state.current); renderTabs(); });
-          cell.append(input);
+          const opener = document.createElement('a');
+          opener.className = 'url-open';
+          opener.target = '_blank';
+          opener.rel = 'noopener noreferrer';
+          opener.textContent = 'Open';
+          opener.title = 'Open URL in a new tab';
+          const wrap = document.createElement('div');
+          wrap.className = 'url-cell';
+          wrap.append(input, opener);
+          bindUrlOpener(input, opener);
+          cell.append(wrap);
         });
       });
       filterRows(); updateCount();
@@ -163,11 +396,13 @@
 
     function harvest() {
       if (!state.data.has(state.current)) return;
-      const matrix = state.data.get(state.current); const rows = [matrix[0]];
-      $('#grid').tBodies[0]?.querySelectorAll('tr').forEach(tr => {
-        rows.push([...tr.querySelectorAll('.cell')].map(input => input.value));
-      });
-      state.data.set(state.current, rows);
+      const matrix = state.data.get(state.current);
+      const incoming = [...($('#grid').tBodies[0]?.querySelectorAll('tr') || [])].map(tr => ({
+        index: Number(tr.dataset.index),
+        row: [...tr.querySelectorAll('.cell')].map(input => input.value)
+      }));
+      incoming.sort((a, b) => a.index - b.index);
+      state.data.set(state.current, [matrix[0], ...incoming.map(item => item.row)]);
     }
 
     function filterRows() {
@@ -182,7 +417,9 @@
     function updateCount() {
       const rows = [...($('#grid').tBodies[0]?.rows || [])];
       const visible = rows.filter(row => !row.classList.contains('hidden')).length;
-      $('#count').textContent = `${visible} of ${rows.length} row${rows.length === 1 ? '' : 's'}`;
+      const spec = sortFor(state.current);
+      const sortNote = spec ? ` · ${spec.header} ${spec.dir === 'desc' ? '↓' : '↑'}` : '';
+      $('#count').textContent = `${visible} of ${rows.length} row${rows.length === 1 ? '' : 's'}${sortNote}`;
     }
 
     async function writeText(handle, text) {
@@ -213,7 +450,7 @@
     $('#filter').oninput = filterRows;
     $('#addRow').onclick = () => {
       harvest(); const matrix = state.data.get(state.current); matrix.push(matrix[0].map(() => '')); state.dirty.add(state.current); renderTabs(); renderTable();
-      $('#grid').tBodies[0].lastElementChild?.scrollIntoView({ block:'center' });
+      $('#grid').tBodies[0].querySelector('tr')?.scrollIntoView({ block:'center' });
     };
     $('#deleteRows').onclick = () => {
       const selected = [...document.querySelectorAll('.row-select:checked')];
