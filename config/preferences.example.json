@@ -1,0 +1,46 @@
+{
+  "candidate_name": "",
+  "current_location": "",
+  "experience_years": null,
+  "target_roles": [],
+  "secondary_roles": [],
+  "excluded_roles": [],
+  "preferred_locations": [],
+  "remote_locations_allowed": [],
+  "willing_to_relocate": false,
+  "relocation_scope": [],
+  "employment_types": ["full-time"],
+  "minimum_compensation": {
+    "amount": null,
+    "currency": "",
+    "period": "year",
+    "component": "fixed/base",
+    "hard_constraint": false,
+    "notes": ""
+  },
+  "must_have": [],
+  "nice_to_have": [],
+  "acceptable_gaps": [],
+  "hard_exclusions": [],
+  "company_preferences": [],
+  "excluded_companies": [],
+  "source_specific_rules": [],
+  "search_keywords": [],
+  "verification_preferences": {
+    "prefer_direct_company_or_ats_url": true,
+    "require_open_posting": true,
+    "require_working_application_link": true,
+    "require_location_eligibility_check": true,
+    "queue_unreadable_jd": true,
+    "report_blocked_sources": true,
+    "deduplicate_against_all_statuses": true
+  },
+  "scoring_weights": {
+    "role_and_scope": 30,
+    "skills_evidence": 25,
+    "seniority": 15,
+    "location_eligibility": 15,
+    "compensation": 10,
+    "company_preference": 5
+  }
+}

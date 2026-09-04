@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Search Tracker</title>
+  <style>
+    :root { color-scheme: light; --ink:#17211b; --muted:#657169; --paper:#f6f7f2; --card:#fff; --line:#dce2dc; --green:#146c43; --green-soft:#e4f3e9; --orange:#b45309; --shadow:0 12px 35px rgba(33,48,38,.09); }
+    * { box-sizing:border-box; }
+    body { margin:0; font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:var(--paper); }
+    header { padding:28px 32px 18px; display:flex; gap:22px; align-items:end; justify-content:space-between; }
+    h1 { margin:0; font:700 30px/1.1 ui-serif, Georgia, serif; letter-spacing:-.02em; }
+    .subtitle { margin:6px 0 0; color:var(--muted); }
+    .actions, .tabs, .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    button, input[type="search"] { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:9px; padding:9px 12px; font:inherit; }
+    button { cursor:pointer; font-weight:650; }
+    button:hover { border-color:#aab6ad; }
+    button.primary { background:var(--green); color:white; border-color:var(--green); }
+    button.danger { color:#9b1c1c; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    main { padding:0 32px 36px; }
+    .notice { background:var(--green-soft); border:1px solid #c1dfcb; border-radius:12px; padding:12px 14px; margin-bottom:16px; color:#24583c; }
+    .tabs { margin-bottom:10px; }
+    .tabs button.active { background:var(--ink); color:white; border-color:var(--ink); }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:15px; box-shadow:var(--shadow); overflow:hidden; }
+    .toolbar { padding:12px; border-bottom:1px solid var(--line); justify-content:space-between; }
+    .toolbar .left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .count { color:var(--muted); font-variant-numeric:tabular-nums; }
+    .table-wrap { overflow:auto; max-height:calc(100vh - 245px); }
+    table { border-collapse:separate; border-spacing:0; min-width:100%; width:max-content; }
+    th { position:sticky; top:0; z-index:2; background:#f0f3ee; text-align:left; font-size:12px; letter-spacing:.02em; color:#4d5a51; border-bottom:1px solid var(--line); }
+    th, td { padding:8px; border-right:1px solid #edf0ed; border-bottom:1px solid #edf0ed; vertical-align:top; min-width:145px; max-width:360px; }
+    th:first-child, td:first-child { min-width:42px; width:42px; text-align:center; position:sticky; left:0; z-index:1; background:inherit; }
+    td:first-child { background:white; }
+    input.cell, textarea.cell { width:100%; min-width:128px; border:1px solid transparent; border-radius:6px; padding:6px; background:transparent; font:inherit; color:inherit; resize:vertical; }
+    textarea.cell { min-height:58px; }
+    input.cell:focus, textarea.cell:focus { outline:none; border-color:#82a88f; background:#fbfffc; box-shadow:0 0 0 3px rgba(20,108,67,.09); }
+    tr.hidden { display:none; }
+    footer { padding:10px 32px 26px; color:var(--muted); }
+    #status.error { color:#a21b1b; }
+    #status.working { color:var(--orange); }
+    @media (max-width:720px) { header { align-items:flex-start; flex-direction:column; } main, header, footer { padding-left:14px; padding-right:14px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Job Search Tracker</h1>
+      <p class="subtitle">Local CSV data · editable in your browser · backed up before every save</p>
+    </div>
+    <div class="actions">
+      <button id="openFolder" class="primary">Open data folder</button>
+      <button id="reload" disabled>Reload</button>
+    </div>
+  </header>
+  <main>
+    <div id="notice" class="notice">Choose the workspace's <strong>data</strong> folder to begin. Nothing is uploaded.</div>
+    <nav id="tabs" class="tabs" aria-label="Tracker sections"></nav>
+    <section class="panel">
+      <div class="toolbar">
+        <div class="left">
+          <input id="filter" type="search" placeholder="Filter rows…" disabled>
+          <button id="addRow" disabled>Add row</button>
+          <button id="deleteRows" class="danger" disabled>Delete selected</button>
+          <span id="count" class="count"></span>
+        </div>
+        <button id="save" class="primary" disabled>Save current table</button>
+      </div>
+      <div class="table-wrap"><table id="grid"></table></div>
+    </section>
+  </main>
+  <footer><span id="status">No folder open.</span></footer>
+
+  <script>
+    const tables = [
+      ['applications.csv', 'Applications'],
+      ['jd-needed.csv', 'JD needed'],
+      ['application-qa.csv', 'Application Q&A'],
+      ['resume-builds.csv', 'Resume builds'],
+      ['search-runs.csv', 'Search runs'],
+      ['search-sources.csv', 'Sources']
+    ];
+    const longFields = new Set(['fit_summary','gaps','user_notes','notes','failure_reason','checks_attempted','question','answer','evidence','blocked_sources','change_summary','unsupported_requirements']);
+    const state = { directory: null, current: tables[0][0], data: new Map(), dirty: new Set() };
+    const $ = selector => document.querySelector(selector);
+
+    function parseCsv(text) {
+      const rows = []; let row = [], field = '', quoted = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (quoted) {
+          if (char === '"' && text[i + 1] === '"') { field += '"'; i++; }
+          else if (char === '"') quoted = false;
+          else field += char;
+        } else if (char === '"') quoted = true;
+        else if (char === ',') { row.push(field); field = ''; }
+        else if (char === '\n') { row.push(field.replace(/\r$/, '')); rows.push(row); row = []; field = ''; }
+        else field += char;
+      }
+      if (field || row.length) { row.push(field.replace(/\r$/, '')); rows.push(row); }
+      return rows.filter((value, index) => index === 0 || value.some(cell => cell !== ''));
+    }
+
+    function csvCell(value) {
+      value = String(value ?? '');
+      return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+    }
+
+    function toCsv(matrix) { return matrix.map(row => row.map(csvCell).join(',')).join('\n') + '\n'; }
+
+    function setStatus(message, kind = '') {
+      $('#status').textContent = message;
+      $('#status').className = kind;
+    }
+
+    async function readFile(name) {
+      const handle = await state.directory.getFileHandle(name);
+      return parseCsv(await (await handle.getFile()).text());
+    }
+
+    async function loadAll() {
+      setStatus('Reading CSV files…', 'working');
+      for (const [name] of tables) state.data.set(name, await readFile(name));
+      state.dirty.clear();
+      renderTabs(); renderTable();
+      for (const id of ['reload','filter','addRow','deleteRows','save']) $(`#${id}`).disabled = false;
+      $('#notice').hidden = true;
+      setStatus('Ready. Changes stay in the browser until saved.');
+    }
+
+    function renderTabs() {
+      const tabs = $('#tabs'); tabs.replaceChildren();
+      for (const [name, label] of tables) {
+        const button = document.createElement('button');
+        button.textContent = `${label}${state.dirty.has(name) ? ' •' : ''}`;
+        button.className = name === state.current ? 'active' : '';
+        button.onclick = () => { harvest(); state.current = name; renderTabs(); renderTable(); };
+        tabs.append(button);
+      }
+    }
+
+    function renderTable() {
+      const matrix = state.data.get(state.current) || [[]];
+      const headers = matrix[0] || [];
+      const grid = $('#grid'); grid.replaceChildren();
+      const thead = grid.createTHead(); const hrow = thead.insertRow();
+      const selectHead = document.createElement('th'); selectHead.textContent = '✓'; hrow.append(selectHead);
+      headers.forEach(header => { const th = document.createElement('th'); th.textContent = header; hrow.append(th); });
+      const body = grid.createTBody();
+      matrix.slice(1).forEach((row, rowIndex) => {
+        const tr = body.insertRow(); tr.dataset.index = rowIndex + 1;
+        const selection = tr.insertCell(); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'row-select'; selection.append(checkbox);
+        headers.forEach((header, columnIndex) => {
+          const cell = tr.insertCell();
+          const input = document.createElement(longFields.has(header) ? 'textarea' : 'input');
+          input.className = 'cell'; input.value = row[columnIndex] ?? ''; input.dataset.column = columnIndex;
+          input.addEventListener('input', () => { state.dirty.add(state.current); renderTabs(); });
+          cell.append(input);
+        });
+      });
+      filterRows(); updateCount();
+    }
+
+    function harvest() {
+      if (!state.data.has(state.current)) return;
+      const matrix = state.data.get(state.current); const rows = [matrix[0]];
+      $('#grid').tBodies[0]?.querySelectorAll('tr').forEach(tr => {
+        rows.push([...tr.querySelectorAll('.cell')].map(input => input.value));
+      });
+      state.data.set(state.current, rows);
+    }
+
+    function filterRows() {
+      const query = $('#filter').value.trim().toLowerCase();
+      $('#grid').tBodies[0]?.querySelectorAll('tr').forEach(tr => {
+        const searchable = [...tr.querySelectorAll('.cell')].map(input => input.value).join(' ').toLowerCase();
+        tr.classList.toggle('hidden', Boolean(query && !searchable.includes(query)));
+      });
+      updateCount();
+    }
+
+    function updateCount() {
+      const rows = [...($('#grid').tBodies[0]?.rows || [])];
+      const visible = rows.filter(row => !row.classList.contains('hidden')).length;
+      $('#count').textContent = `${visible} of ${rows.length} row${rows.length === 1 ? '' : 's'}`;
+    }
+
+    async function writeText(handle, text) {
+      const writable = await handle.createWritable(); await writable.write(text); await writable.close();
+    }
+
+    async function saveCurrent() {
+      harvest(); setStatus(`Saving ${state.current}…`, 'working');
+      const handle = await state.directory.getFileHandle(state.current);
+      const previous = await (await handle.getFile()).text();
+      const backups = await state.directory.getDirectoryHandle('backups', { create: true });
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backup = await backups.getFileHandle(`${state.current.replace('.csv','')}-${stamp}.csv`, { create: true });
+      await writeText(backup, previous);
+      await writeText(handle, toCsv(state.data.get(state.current)));
+      state.dirty.delete(state.current); renderTabs();
+      setStatus(`Saved ${state.current}; backup created.`);
+    }
+
+    $('#openFolder').onclick = async () => {
+      try { state.directory = await window.showDirectoryPicker({ mode: 'readwrite' }); await loadAll(); }
+      catch (error) { if (error.name !== 'AbortError') setStatus(error.message, 'error'); }
+    };
+    $('#reload').onclick = async () => {
+      if (state.dirty.size && !confirm('Discard unsaved changes and reload the CSV files?')) return;
+      try { await loadAll(); } catch (error) { setStatus(error.message, 'error'); }
+    };
+    $('#filter').oninput = filterRows;
+    $('#addRow').onclick = () => {
+      harvest(); const matrix = state.data.get(state.current); matrix.push(matrix[0].map(() => '')); state.dirty.add(state.current); renderTabs(); renderTable();
+      $('#grid').tBodies[0].lastElementChild?.scrollIntoView({ block:'center' });
+    };
+    $('#deleteRows').onclick = () => {
+      const selected = [...document.querySelectorAll('.row-select:checked')];
+      if (!selected.length || !confirm(`Delete ${selected.length} selected row(s)? A backup is made when you save.`)) return;
+      selected.forEach(box => box.closest('tr').remove()); state.dirty.add(state.current); harvest(); renderTabs(); updateCount();
+    };
+    $('#save').onclick = async () => { try { await saveCurrent(); } catch (error) { setStatus(error.message, 'error'); } };
+
+    if (!('showDirectoryPicker' in window)) {
+      $('#openFolder').disabled = true;
+      $('#notice').innerHTML = 'This browser does not support editable local folders. Open this page in a current Chrome or Edge browser.';
+      setStatus('File System Access API unavailable.', 'error');
+    }
+    renderTabs();
+  </script>
+</body>
+</html>

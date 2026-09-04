@@ -1,0 +1,25 @@
+# Candidate documents and generated application material may contain personal data.
+config/preferences.json
+data/*.csv
+resumes/master/*
+!resumes/master/README.md
+resumes/tailored/*
+!resumes/tailored/README.md
+resumes/content/*
+!resumes/content/README.md
+resumes/profiles/*.json
+resumes/generated/*
+!resumes/generated/.gitkeep
+data/application-answers/*
+!data/application-answers/README.md
+data/backups/*
+!data/backups/.gitkeep
+
+# Temporary tracker writes
+data/*.tmp-*
+
+# Local and generated project artifacts
+.DS_Store
+node_modules/
+dist/*
+!dist/.gitkeep

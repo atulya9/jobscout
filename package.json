@@ -1,0 +1,18 @@
+{
+  "name": "portable-job-search",
+  "version": "0.2.0",
+  "private": true,
+  "description": "A local, agent-independent workflow for verified job discovery, tracking, application Q&A, and evidence-grounded resume tailoring.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "init": "node .agents/skills/job-search/scripts/tracker.mjs init",
+    "validate": "node .agents/skills/job-search/scripts/tracker.mjs validate",
+    "check": "node --check .agents/skills/job-search/scripts/tracker.mjs && node --check .agents/skills/job-search/scripts/serve-tracker.mjs && node --check .agents/skills/job-search/scripts/generate-resume.mjs",
+    "tracker": "node .agents/skills/job-search/scripts/serve-tracker.mjs",
+    "resume:profiles": "node .agents/skills/job-search/scripts/generate-resume.mjs --list-profiles"
+  }
+}
