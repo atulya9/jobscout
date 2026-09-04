@@ -1,6 +1,6 @@
-# Portable Job Search
+# Jobscout
 
-This folder is a local, agent-independent job-search workspace. Its data lives in CSV files, the dashboard runs entirely on your computer, and the workflow is stored as an Agent Skill.
+Jobscout is a local, agent-independent job-search workspace. Its data lives in CSV files, the dashboard runs entirely on your computer, and the workflow is stored as an Agent Skill.
 
 ## One-time setup
 
@@ -73,12 +73,12 @@ It will analyze the saved JD, create a selection file containing only approved e
 From the workspace root, run:
 
 ```bash
-node .agents/skills/job-search/scripts/serve-tracker.mjs
+npm run tracker
 ```
 
-Open `http://127.0.0.1:4173`, click **Open data folder**, and select this workspace's `data/` directory. The browser will ask for read/write permission. The page can edit applications, unreadable JDs, search runs, source health, application Q&A, and generated-resume records. It makes a timestamped backup before saving a CSV.
+Open `http://127.0.0.1:4173`. Jobscout reads and writes this workspace's `data/` directory, so a refresh reloads the latest CSVs without choosing a folder. The Roles page lists applications and unread JDs together; Q&A expands on each application, and resume suggestions jump to the matching resume-build record. Search runs and source health stay on their own tabs. Saving makes a timestamped backup first.
 
-The editable-folder feature works best in Chrome or Edge and requires the page to be served from localhost; opening `tracker/index.html` directly is not sufficient.
+If you open `tracker/index.html` without the server, use **Open data folder** and select this workspace's `data/` directory. That fallback needs Chrome or Edge.
 
 ## Useful checks
 

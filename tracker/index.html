@@ -3,94 +3,130 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Job Search Tracker</title>
+  <title>Jobscout</title>
   <style>
-    :root { color-scheme: light; --ink:#17211b; --muted:#657169; --paper:#f6f7f2; --card:#fff; --line:#dce2dc; --green:#146c43; --green-soft:#e4f3e9; --orange:#b45309; --shadow:0 12px 35px rgba(33,48,38,.09); }
+    :root { color-scheme: light; --ink:#17211b; --muted:#657169; --paper:#f6f7f2; --card:#fff; --line:#dce2dc; --green:#146c43; --green-soft:#e4f3e9; --orange:#b45309; --orange-soft:#fff3e0; --red:#9b1c1c; --red-soft:#fde8e8; --shadow:0 12px 35px rgba(33,48,38,.09); }
     * { box-sizing:border-box; }
     body { margin:0; font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:var(--paper); }
-    header { padding:28px 32px 18px; display:flex; gap:22px; align-items:end; justify-content:space-between; }
+    header { padding:24px 32px 14px; display:flex; gap:22px; align-items:end; justify-content:space-between; }
     h1 { margin:0; font:700 30px/1.1 ui-serif, Georgia, serif; letter-spacing:-.02em; }
+    h2 { margin:0 0 10px; font:700 16px/1.3 ui-serif, Georgia, serif; }
     .subtitle { margin:6px 0 0; color:var(--muted); }
-    .actions, .tabs, .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    button, input[type="search"] { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:9px; padding:9px 12px; font:inherit; }
+    .actions, .tabs, .toolbar, .filters, .meta-row, .chip-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    button, input, select, textarea { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:9px; padding:9px 12px; font:inherit; }
     button { cursor:pointer; font-weight:650; }
     button:hover { border-color:#aab6ad; }
     button.primary { background:var(--green); color:white; border-color:var(--green); }
-    button.danger { color:#9b1c1c; }
+    button.danger { color:var(--red); }
+    button.ghost { background:transparent; }
     button:disabled { opacity:.45; cursor:not-allowed; }
     main { padding:0 32px 36px; }
     .notice { background:var(--green-soft); border:1px solid #c1dfcb; border-radius:12px; padding:12px 14px; margin-bottom:16px; color:#24583c; }
+    .notice.warn { background:var(--orange-soft); border-color:#f0d2a2; color:#7a3f04; }
     .tabs { margin-bottom:10px; }
     .tabs button.active { background:var(--ink); color:white; border-color:var(--ink); }
     .panel { background:var(--card); border:1px solid var(--line); border-radius:15px; box-shadow:var(--shadow); overflow:hidden; }
     .toolbar { padding:12px; border-bottom:1px solid var(--line); justify-content:space-between; }
     .toolbar .left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .count { color:var(--muted); font-variant-numeric:tabular-nums; }
+    .kind-toggle { display:flex; padding:3px; border:1px solid var(--line); border-radius:11px; background:#f3f6f2; }
+    .kind-toggle button { border:0; background:transparent; padding:7px 11px; border-radius:8px; }
+    .kind-toggle button.active { background:white; box-shadow:0 1px 4px rgba(33,48,38,.12); }
+    .list { padding:14px; display:flex; flex-direction:column; gap:18px; max-height:calc(100vh - 250px); overflow:auto; }
+    .section-head { display:flex; justify-content:space-between; align-items:baseline; padding:4px 2px 8px; border-bottom:1px solid var(--line); margin-bottom:8px; color:var(--muted); }
+    .cards { display:flex; flex-direction:column; gap:10px; }
+    .card { border:1px solid var(--line); border-radius:12px; background:#fff; padding:12px 14px; }
+    .card.jd { background:#fcfbf7; }
+    .card.focused { outline:2px solid var(--green); }
+    .card-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .card h3 { margin:0 0 2px; font:700 16px/1.25 inherit; }
+    .card .role { color:var(--muted); }
+    .card-open { border:0; background:transparent; padding:0; text-align:left; cursor:pointer; flex:1; min-width:0; }
+    .card-open:hover h3 { color:var(--green); }
+    .pill { display:inline-flex; align-items:center; border-radius:999px; padding:3px 8px; font-size:12px; font-weight:700; background:#eef1ec; color:#4d5a51; }
+    .pill.good { background:var(--green-soft); color:var(--green); }
+    .pill.warn { background:var(--orange-soft); color:var(--orange); }
+    .pill.bad { background:var(--red-soft); color:var(--red); }
+    .pill.kind { background:#e8eefc; color:#27408b; }
+    .meta-row { color:var(--muted); font-size:13px; margin-top:6px; }
+    .chip-row { margin-top:10px; }
+    .chip { border:1px solid var(--line); background:#f6f8f5; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:650; text-decoration:none; color:inherit; cursor:pointer; }
+    .chip:hover { border-color:#aab6ad; background:white; }
+    .chip.link { color:var(--green); }
+    .details { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+    .field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .field.wide { grid-column:1 / -1; }
+    .field label { font-size:11px; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+    .field input, .field textarea, .field select { width:100%; }
+    .field textarea { min-height:72px; resize:vertical; }
+    .url-field { display:flex; gap:6px; align-items:center; min-width:0; }
+    .url-field input { flex:1 1 auto; min-width:0; }
+    .url-open { flex:0 0 auto; color:var(--green); font-size:12px; font-weight:700; text-decoration:none; padding:6px 8px; border-radius:8px; }
+    .url-open:hover { background:var(--green-soft); }
+    .url-open[hidden] { display:none; }
+    .qa-list { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+    .qa { border:1px solid #e6ebe6; border-radius:10px; padding:10px; background:#fbfcf9; }
+    .qa summary { cursor:pointer; font-weight:650; }
+    .qa-body { margin-top:8px; display:flex; flex-direction:column; gap:8px; }
     .table-wrap { overflow:auto; max-height:calc(100vh - 245px); }
     table { border-collapse:separate; border-spacing:0; table-layout:fixed; width:max-content; }
     th { position:sticky; top:0; z-index:2; background:#f0f3ee; text-align:left; font-size:12px; letter-spacing:.02em; color:#4d5a51; border-bottom:1px solid var(--line); overflow:visible; }
     th, td { padding:8px; border-right:1px solid #edf0ed; border-bottom:1px solid #edf0ed; vertical-align:top; min-width:0; }
-    th .th-label { display:block; padding-right:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    th .th-label { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     th .th-sort { display:flex; align-items:center; gap:4px; width:100%; margin:0; padding:0 10px 0 0; border:0; background:transparent; font:inherit; color:inherit; letter-spacing:inherit; text-align:left; cursor:pointer; border-radius:6px; }
     th .th-sort:hover { background:rgba(20,108,67,.08); }
-    th .th-sort .th-label { flex:1 1 auto; padding-right:0; }
-    .sort-ind { flex:0 0 auto; min-width:0.9em; font-size:10px; line-height:1; color:#9aa59c; }
-    th .th-sort[aria-sort="ascending"] .sort-ind, th .th-sort[aria-sort="descending"] .sort-ind { color:var(--green); font-weight:800; }
+    .sort-ind { flex:0 0 auto; min-width:0.9em; font-size:10px; color:#9aa59c; }
+    th .th-sort[aria-sort] .sort-ind { color:var(--green); font-weight:800; }
     .col-resizer { position:absolute; top:0; right:-3px; width:9px; height:100%; cursor:col-resize; z-index:4; touch-action:none; }
-    .col-resizer::after { content:""; position:absolute; top:6px; bottom:6px; left:3px; width:3px; border-radius:99px; background:transparent; }
-    th:hover .col-resizer::after, .col-resizer:hover::after, body.col-resizing .col-resizer:hover::after { background:#b7c4ba; }
+    .col-resizer::after { content:""; position:absolute; top:6px; bottom:6px; left:3px; width:3px; border-radius:99px; }
+    th:hover .col-resizer::after { background:#b7c4ba; }
     body.col-resizing, body.col-resizing * { cursor:col-resize !important; user-select:none !important; }
-    body.col-resizing input, body.col-resizing textarea, body.col-resizing a { pointer-events:none; }
     th:first-child, td:first-child { width:42px; text-align:center; position:sticky; left:0; z-index:1; background:inherit; }
     th:first-child { z-index:3; }
     td:first-child { background:white; }
     input.cell, textarea.cell { width:100%; min-width:0; border:1px solid transparent; border-radius:6px; padding:6px; background:transparent; font:inherit; color:inherit; resize:vertical; }
     textarea.cell { min-height:58px; }
-    input.cell { overflow:hidden; text-overflow:ellipsis; }
-    input.cell:focus, textarea.cell:focus { outline:none; border-color:#82a88f; background:#fbfffc; box-shadow:0 0 0 3px rgba(20,108,67,.09); }
     .url-cell { display:flex; gap:4px; align-items:flex-start; min-width:0; }
     .url-cell .cell { flex:1 1 auto; }
-    .url-open { flex:0 0 auto; align-self:center; color:var(--green); font-size:12px; font-weight:700; text-decoration:none; padding:5px 7px; border-radius:7px; border:1px solid transparent; }
-    .url-open:hover { background:var(--green-soft); border-color:#c1dfcb; }
-    .url-open[hidden] { display:none; }
-    tr.hidden { display:none; }
+    .url-open { flex:0 0 auto; align-self:center; color:var(--green); font-size:12px; font-weight:700; text-decoration:none; padding:5px 7px; }
+    .empty { color:var(--muted); padding:28px 8px; text-align:center; }
     footer { padding:10px 32px 26px; color:var(--muted); }
-    #status.error { color:#a21b1b; }
+    #status.error { color:var(--red); }
     #status.working { color:var(--orange); }
-    @media (max-width:720px) { header { align-items:flex-start; flex-direction:column; } main, header, footer { padding-left:14px; padding-right:14px; } }
+    @media (max-width:720px) {
+      header { align-items:flex-start; flex-direction:column; }
+      main, header, footer { padding-left:14px; padding-right:14px; }
+      .details { grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>Job Search Tracker</h1>
-      <p class="subtitle">Local CSV data · editable in your browser · backed up before every save</p>
+      <h1>Jobscout</h1>
+      <p class="subtitle">Local workspace data · backed up before every save</p>
     </div>
     <div class="actions">
-      <button id="openFolder" class="primary">Open data folder</button>
-      <button id="reload" disabled>Reload</button>
+      <button id="openFolder" class="ghost" hidden>Open data folder</button>
+      <button id="reload">Reload</button>
+      <button id="save" class="primary">Save changes</button>
     </div>
   </header>
   <main>
-    <div id="notice" class="notice">Choose the workspace's <strong>data</strong> folder to begin. Nothing is uploaded.</div>
+    <div id="notice" class="notice">Loading workspace data…</div>
     <nav id="tabs" class="tabs" aria-label="Tracker sections"></nav>
     <section class="panel">
       <div class="toolbar">
-        <div class="left">
-          <input id="filter" type="search" placeholder="Filter rows…" disabled>
-          <button id="addRow" disabled>Add row</button>
-          <button id="deleteRows" class="danger" disabled>Delete selected</button>
-          <span id="count" class="count"></span>
-        </div>
-        <button id="save" class="primary" disabled>Save current table</button>
+        <div class="left" id="toolbarLeft"></div>
+        <span id="count" class="count"></span>
       </div>
-      <div class="table-wrap"><table id="grid"></table></div>
+      <div id="view"></div>
     </section>
   </main>
-  <footer><span id="status">No folder open.</span></footer>
+  <footer><span id="status">Starting…</span></footer>
 
   <script>
-    const tables = [
+    const TABLES = [
       ['applications.csv', 'Applications'],
       ['jd-needed.csv', 'JD needed'],
       ['application-qa.csv', 'Application Q&A'],
@@ -98,20 +134,83 @@
       ['search-runs.csv', 'Search runs'],
       ['search-sources.csv', 'Sources']
     ];
-    const longFields = new Set(['fit_summary','gaps','user_notes','notes','failure_reason','checks_attempted','question','answer','evidence','blocked_sources','change_summary','unsupported_requirements']);
+    const TABLE_VIEWS = [
+      ['roles', 'Roles'],
+      ['resume-builds.csv', 'Resume builds'],
+      ['search-runs.csv', 'Search runs'],
+      ['search-sources.csv', 'Sources']
+    ];
+    const LONG_FIELDS = new Set(['fit_summary','gaps','user_notes','notes','failure_reason','checks_attempted','question','answer','evidence','blocked_sources','change_summary','unsupported_requirements']);
     const DATE_HEADER = /^(?:.+_(?:at|date)|first_seen|last_seen|last_verified|last_checked|generated_at)$/;
-    const WIDTH_KEY = 'portable-job-search:column-widths';
-    const SORT_KEY = 'portable-job-search:column-sorts';
-    const state = { directory: null, current: tables[0][0], data: new Map(), dirty: new Set() };
+    const WIDTH_KEY = 'jobscout:column-widths';
+    const SORT_KEY = 'jobscout:column-sorts';
+    const UI_KEY = 'jobscout:ui';
+
+    function migratePref(oldKey, newKey) {
+      if (localStorage.getItem(newKey) != null) return;
+      const previous = localStorage.getItem(oldKey);
+      if (previous != null) {
+        localStorage.setItem(newKey, previous);
+        localStorage.removeItem(oldKey);
+      }
+    }
+    migratePref('portable-job-search:column-widths', WIDTH_KEY);
+    migratePref('portable-job-search:column-sorts', SORT_KEY);
+    migratePref('portable-job-search:ui', UI_KEY);
+    const ROLE_SORTS = [
+      ['first_seen:desc', 'Newest first'],
+      ['first_seen:asc', 'Oldest first'],
+      ['company:asc', 'Company A–Z'],
+      ['status:asc', 'Status'],
+      ['score:desc', 'Highest score'],
+      ['application_date:desc', 'Application date']
+    ];
+
+    const state = {
+      source: null,
+      directory: null,
+      current: 'roles',
+      data: new Map(),
+      dirty: new Set(),
+      filters: { query: '', kind: 'both', status: '' },
+      expanded: new Set(),
+      qaOpen: new Set(),
+      focusResumeId: '',
+      roleSort: 'first_seen:desc'
+    };
     const $ = selector => document.querySelector(selector);
+
+    function loadUi() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
+        if (TABLE_VIEWS.some(([id]) => id === saved.current)) state.current = saved.current;
+        if (['both', 'applications', 'jd-needed'].includes(saved.kind)) state.filters.kind = saved.kind;
+        if (typeof saved.status === 'string') state.filters.status = saved.status;
+        if (typeof saved.query === 'string') state.filters.query = saved.query;
+        if (ROLE_SORTS.some(([id]) => id === saved.roleSort)) state.roleSort = saved.roleSort;
+      } catch { /* ignore */ }
+    }
+
+    function saveUi() {
+      localStorage.setItem(UI_KEY, JSON.stringify({
+        current: state.current,
+        kind: state.filters.kind,
+        status: state.filters.status,
+        query: state.filters.query,
+        roleSort: state.roleSort
+      }));
+    }
 
     function parseTime(value) {
       const text = String(value ?? '').trim();
       if (!text) return null;
-      const ms = /^\d{4}-\d{2}-\d{2}$/.test(text)
-        ? Date.parse(`${text}T23:59:59.999`)
-        : Date.parse(text);
+      const ms = /^\d{4}-\d{2}-\d{2}$/.test(text) ? Date.parse(`${text}T23:59:59.999`) : Date.parse(text);
       return Number.isNaN(ms) ? null : ms;
+    }
+
+    function today() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
 
     function isBlankRow(row) {
@@ -122,15 +221,14 @@
       try {
         const saved = JSON.parse(localStorage.getItem(SORT_KEY) || '{}')[tableName];
         if (saved && typeof saved.header === 'string' && (saved.dir === 'asc' || saved.dir === 'desc')) return saved;
-      } catch { /* ignore broken preference */ }
+      } catch { /* ignore */ }
       return null;
     }
 
     function saveSort(tableName, header, dir) {
       let all = {};
       try { all = JSON.parse(localStorage.getItem(SORT_KEY) || '{}'); } catch { all = {}; }
-      if (!header) delete all[tableName];
-      else all[tableName] = { header, dir };
+      all[tableName] = { header, dir };
       localStorage.setItem(SORT_KEY, JSON.stringify(all));
     }
 
@@ -146,9 +244,7 @@
       }
       const aNum = Number(String(left).replace(/,/g, ''));
       const bNum = Number(String(right).replace(/,/g, ''));
-      if (/^-?\d/.test(left) && /^-?\d/.test(right) && Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) {
-        return aNum - bNum;
-      }
+      if (/^-?\d/.test(left) && /^-?\d/.test(right) && Number.isFinite(aNum) && Number.isFinite(bNum) && aNum !== bNum) return aNum - bNum;
       return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: 'base' });
     }
 
@@ -156,40 +252,29 @@
       const spec = sortFor(name);
       const column = spec ? headers.indexOf(spec.header) : -1;
       const dir = spec?.dir === 'desc' ? -1 : 1;
-      return rows
-        .map((row, index) => ({ row, index }))
-        .sort((a, b) => {
-          const aBlank = isBlankRow(a.row);
-          const bBlank = isBlankRow(b.row);
-          if (aBlank !== bBlank) return aBlank ? -1 : 1;
-          if (column < 0) return a.index - b.index;
-          const aText = String(a.row[column] ?? '').trim();
-          const bText = String(b.row[column] ?? '').trim();
-          if (!aText && !bText) return a.index - b.index;
-          if (!aText) return 1;
-          if (!bText) return -1;
-          const cmp = compareValues(spec.header, aText, bText);
-          return cmp ? cmp * dir : a.index - b.index;
-        });
-    }
-
-    function applySort(header) {
-      harvest();
-      const current = sortFor(state.current);
-      if (current?.header === header) saveSort(state.current, header, current.dir === 'asc' ? 'desc' : 'asc');
-      else saveSort(state.current, header, defaultDir(header));
-      renderTable();
+      return rows.map((row, index) => ({ row, index })).sort((a, b) => {
+        const aBlank = isBlankRow(a.row);
+        const bBlank = isBlankRow(b.row);
+        if (aBlank !== bBlank) return aBlank ? -1 : 1;
+        if (column < 0) return a.index - b.index;
+        const aText = String(a.row[column] ?? '').trim();
+        const bText = String(b.row[column] ?? '').trim();
+        if (!aText && !bText) return a.index - b.index;
+        if (!aText) return 1;
+        if (!bText) return -1;
+        const cmp = compareValues(spec.header, aText, bText);
+        return cmp ? cmp * dir : a.index - b.index;
+      });
     }
 
     function defaultWidth(header) {
       if (!header) return 42;
       if (/url|path/i.test(header)) return 260;
-      if (longFields.has(header)) return 280;
+      if (LONG_FIELDS.has(header)) return 280;
       if (DATE_HEADER.test(header)) return 132;
       if (/_id$/.test(header)) return 200;
       if (header === 'role') return 240;
       if (header === 'company') return 150;
-      if (header === 'status' || header === 'verification' || header === 'review_status' || header === 'answer_status') return 120;
       return 160;
     }
 
@@ -214,59 +299,9 @@
         try {
           const url = new URL(candidate);
           if (url.protocol === 'http:' || url.protocol === 'https:') return url.href;
-        } catch { /* ignore invalid URL text */ }
+        } catch { /* ignore */ }
       }
       return '';
-    }
-
-    function bindUrlOpener(input, opener) {
-      const sync = () => {
-        const href = httpUrlFrom(input.value);
-        if (href) { opener.href = href; opener.hidden = false; }
-        else { opener.removeAttribute('href'); opener.hidden = true; }
-      };
-      input.addEventListener('input', sync);
-      sync();
-    }
-
-    function syncTableWidth(grid = $('#grid')) {
-      const total = [...grid.querySelectorAll('col')].reduce((sum, col) => sum + (parseInt(col.style.width, 10) || 0), 0);
-      if (total) grid.style.width = `${total}px`;
-    }
-
-    function enableColumnResize(th, col, tableName, header) {
-      const handle = document.createElement('span');
-      handle.className = 'col-resizer';
-      handle.role = 'separator';
-      handle.ariaOrientation = 'vertical';
-      handle.title = 'Drag to resize column';
-      th.append(handle);
-      handle.addEventListener('pointerdown', event => {
-        if (event.button) return;
-        event.preventDefault();
-        handle.setPointerCapture(event.pointerId);
-        const startX = event.clientX;
-        const startWidth = col.getBoundingClientRect().width;
-        document.body.classList.add('col-resizing');
-        const move = ev => {
-          const width = Math.max(56, Math.round(startWidth + ev.clientX - startX));
-          col.style.width = `${width}px`;
-          syncTableWidth(th.closest('table'));
-        };
-        const stop = ev => {
-          handle.removeEventListener('pointermove', move);
-          handle.removeEventListener('pointerup', stop);
-          handle.removeEventListener('pointercancel', stop);
-          document.body.classList.remove('col-resizing');
-          if (ev.pointerId !== undefined) {
-            try { handle.releasePointerCapture(ev.pointerId); } catch { /* already released */ }
-          }
-          saveWidth(tableName, header, parseInt(col.style.width, 10));
-        };
-        handle.addEventListener('pointermove', move);
-        handle.addEventListener('pointerup', stop);
-        handle.addEventListener('pointercancel', stop);
-      });
     }
 
     function parseCsv(text) {
@@ -298,173 +333,666 @@
       $('#status').className = kind;
     }
 
-    async function readFile(name) {
+    function headersOf(name) { return (state.data.get(name) || [[]])[0] || []; }
+
+    function recordsOf(name) {
+      const matrix = state.data.get(name) || [[]];
+      const headers = matrix[0] || [];
+      return matrix.slice(1).map((row, index) => {
+        const record = { _table: name, _index: index + 1 };
+        headers.forEach((header, column) => { record[header] = row[column] ?? ''; });
+        return record;
+      });
+    }
+
+    function writeField(table, index, header, value) {
+      const matrix = state.data.get(table);
+      if (!matrix) return;
+      const column = matrix[0].indexOf(header);
+      if (column < 0 || !matrix[index]) return;
+      matrix[index][column] = value;
+      state.dirty.add(table);
+      renderTabs();
+      $('#save').disabled = false;
+    }
+
+    function statusTone(status) {
+      const value = String(status || '').toLowerCase();
+      if (/applied|interview|offer|hiring|ready|used|complete/.test(value)) return 'good';
+      if (/new|review|draft|needed|to review/.test(value)) return 'warn';
+      if (/reject|expir|broken|skip|closed|withdraw|bad|duplicate|block|unavail|likely/.test(value)) return 'bad';
+      return '';
+    }
+
+    function el(tag, attrs = {}, ...children) {
+      const node = document.createElement(tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        if (value == null || value === false) continue;
+        if (key === 'class') node.className = value;
+        else if (key === 'text') node.textContent = value;
+        else if (key.startsWith('on') && typeof value === 'function') node.addEventListener(key.slice(2), value);
+        else if (key === 'dataset') Object.assign(node.dataset, value);
+        else node.setAttribute(key, value === true ? '' : value);
+      }
+      for (const child of children.flat()) {
+        if (child == null || child === false) continue;
+        node.append(child.nodeType ? child : document.createTextNode(child));
+      }
+      return node;
+    }
+
+    const FIELD_LABELS = {
+      url: 'Listing URL',
+      canonical_url: 'Official apply URL',
+      source_jd_url: 'Source JD URL'
+    };
+    const FIELD_HINTS = {
+      url: 'Where the role was found — a job board, aggregator, or other listing page.',
+      canonical_url: 'The employer or ATS page used to apply (Greenhouse, Lever, Workday, company careers).',
+      source_jd_url: 'Job description URL this resume build was based on.'
+    };
+
+    function fieldLabel(header) {
+      return FIELD_LABELS[header] || header.replaceAll('_', ' ');
+    }
+
+    function bindOpener(input, opener) {
+      const sync = () => {
+        const href = httpUrlFrom(input.value);
+        if (href) { opener.href = href; opener.hidden = false; }
+        else { opener.removeAttribute('href'); opener.hidden = true; }
+      };
+      input.addEventListener('input', sync);
+      sync();
+      return opener;
+    }
+
+    function fieldControl(table, record, header, kind = 'input') {
+      const control = kind === 'textarea' || LONG_FIELDS.has(header) ? el('textarea') : el('input');
+      control.value = record[header] ?? '';
+      control.addEventListener('input', () => writeField(table, record._index, header, control.value));
+      const opener = el('a', { class: 'url-open', target: '_blank', rel: 'noopener noreferrer', text: 'Open', title: 'Open URL in a new tab' });
+      bindOpener(control, opener);
+      const showOpen = /url/i.test(header) || httpUrlFrom(control.value);
+      const body = showOpen ? el('div', { class: 'url-field' }, control, opener) : control;
+      return el('div', { class: `field${LONG_FIELDS.has(header) || kind === 'textarea' ? ' wide' : ''}` },
+        el('label', { text: fieldLabel(header), title: FIELD_HINTS[header] || '' }),
+        body
+      );
+    }
+
+    function linkChip(label, href) {
+      if (!href) return null;
+      return el('a', { class: 'chip link', href, target: '_blank', rel: 'noopener noreferrer', text: label });
+    }
+
+    function qaFor(jobId) {
+      if (!jobId) return [];
+      return recordsOf('application-qa.csv').filter(row => row.job_id === jobId);
+    }
+
+    function resumeFor(jobId) {
+      if (!jobId) return null;
+      const matches = recordsOf('resume-builds.csv').filter(row => row.job_id === jobId);
+      if (!matches.length) return null;
+      const rank = status => ({ used: 3, ready: 2, draft: 1 }[status] || 0);
+      return matches.sort((a, b) => {
+        const status = rank(b.review_status) - rank(a.review_status);
+        if (status) return status;
+        return (parseTime(b.generated_at) || 0) - (parseTime(a.generated_at) || 0);
+      })[0];
+    }
+
+    function compareRoleRecords(a, b) {
+      const [header, dirName] = state.roleSort.split(':');
+      const dir = dirName === 'desc' ? -1 : 1;
+      const aBlank = !a.company && !a.role && !a.job_id;
+      const bBlank = !b.company && !b.role && !b.job_id;
+      if (aBlank !== bBlank) return aBlank ? -1 : 1;
+      const aText = String(a[header] ?? '').trim();
+      const bText = String(b[header] ?? '').trim();
+      if (!aText && !bText) return a._index - b._index;
+      if (!aText) return 1;
+      if (!bText) return -1;
+      const cmp = compareValues(header, aText, bText);
+      return cmp ? cmp * dir : a._index - b._index;
+    }
+
+    function sortRoleItems(items) {
+      return items.slice().sort((a, b) => compareRoleRecords(a.record, b.record));
+    }
+
+    function matchesQuery(record) {
+      const query = state.filters.query.trim().toLowerCase();
+      if (!query) return true;
+      return Object.entries(record).some(([key, value]) => !key.startsWith('_') && String(value).toLowerCase().includes(query));
+    }
+
+    function visibleRoles(kind) {
+      return recordsOf(kind === 'applications' ? 'applications.csv' : 'jd-needed.csv')
+        .filter(record => {
+          if (state.filters.status && record.status !== state.filters.status) return false;
+          return matchesQuery(record);
+        });
+    }
+
+    function allStatuses() {
+      const kinds = state.filters.kind === 'both' ? ['applications', 'jd-needed'] : [state.filters.kind];
+      return [...new Set(kinds.flatMap(kind => recordsOf(`${kind}.csv`).map(row => row.status).filter(Boolean)))].sort((a, b) => a.localeCompare(b));
+    }
+
+    async function detectApi() {
+      try {
+        const response = await fetch('/api/meta', { cache: 'no-store' });
+        return response.ok;
+      } catch { return false; }
+    }
+
+    async function readFromApi(name) {
+      const response = await fetch(`/api/data/${name}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Could not read ${name}`);
+      return parseCsv(await response.text());
+    }
+
+    async function readFromFolder(name) {
       const handle = await state.directory.getFileHandle(name);
       return parseCsv(await (await handle.getFile()).text());
     }
 
     async function loadAll() {
       setStatus('Reading CSV files…', 'working');
-      for (const [name] of tables) state.data.set(name, await readFile(name));
+      const read = state.source === 'api' ? readFromApi : readFromFolder;
+      for (const [name] of TABLES) state.data.set(name, await read(name));
       state.dirty.clear();
-      renderTabs(); renderTable();
-      for (const id of ['reload','filter','addRow','deleteRows','save']) $(`#${id}`).disabled = false;
       $('#notice').hidden = true;
-      setStatus('Ready. Changes stay in the browser until saved.');
+      $('#save').disabled = true;
+      render();
+      setStatus(state.source === 'api' ? 'Loaded from the local tracker server.' : 'Loaded from the selected data folder.');
+    }
+
+    async function saveTable(name) {
+      const csv = toCsv(state.data.get(name));
+      if (state.source === 'api') {
+        const response = await fetch(`/api/data/${name}`, { method: 'PUT', headers: { 'Content-Type': 'text/csv; charset=utf-8' }, body: csv });
+        if (!response.ok) throw new Error(await response.text());
+        return;
+      }
+      const handle = await state.directory.getFileHandle(name);
+      const previous = await (await handle.getFile()).text();
+      const backups = await state.directory.getDirectoryHandle('backups', { create: true });
+      const backup = await backups.getFileHandle(`${name.replace('.csv', '')}-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`, { create: true });
+      const write = async (fileHandle, text) => { const writable = await fileHandle.createWritable(); await writable.write(text); await writable.close(); };
+      await write(backup, previous);
+      await write(handle, csv);
+    }
+
+    async function saveAll() {
+      if (!state.dirty.size) { setStatus('Nothing to save.'); return; }
+      setStatus('Saving…', 'working');
+      for (const name of [...state.dirty]) await saveTable(name);
+      state.dirty.clear();
+      renderTabs();
+      $('#save').disabled = true;
+      setStatus('Saved. A backup was created for each written table.');
     }
 
     function renderTabs() {
-      const tabs = $('#tabs'); tabs.replaceChildren();
-      for (const [name, label] of tables) {
-        const button = document.createElement('button');
-        button.textContent = `${label}${state.dirty.has(name) ? ' •' : ''}`;
-        button.className = name === state.current ? 'active' : '';
-        button.onclick = () => { harvest(); state.current = name; renderTabs(); renderTable(); };
-        tabs.append(button);
+      const tabs = $('#tabs');
+      tabs.replaceChildren();
+      for (const [id, label] of TABLE_VIEWS) {
+        const dirty = id === 'roles'
+          ? ['applications.csv', 'jd-needed.csv', 'application-qa.csv'].some(name => state.dirty.has(name))
+          : state.dirty.has(id);
+        tabs.append(el('button', {
+          class: id === state.current ? 'active' : '',
+          text: `${label}${dirty ? ' •' : ''}`,
+          onclick: () => { harvestTable(); state.current = id; saveUi(); render(); }
+        }));
       }
     }
 
-    function renderTable() {
-      const matrix = state.data.get(state.current) || [[]];
-      const headers = matrix[0] || [];
-      const savedWidths = widthsFor(state.current);
-      const grid = $('#grid'); grid.replaceChildren();
-      const colgroup = document.createElement('colgroup');
-      const selectCol = document.createElement('col');
-      selectCol.style.width = `${savedWidths['✓'] || 42}px`;
-      colgroup.append(selectCol);
-      headers.forEach(header => {
-        const col = document.createElement('col');
-        col.style.width = `${savedWidths[header] || defaultWidth(header)}px`;
-        colgroup.append(col);
-      });
-      grid.append(colgroup);
-      const thead = grid.createTHead(); const hrow = thead.insertRow();
-      const selectHead = document.createElement('th');
-      const selectLabel = document.createElement('span');
-      selectLabel.className = 'th-label'; selectLabel.textContent = '✓';
-      selectHead.append(selectLabel);
-      enableColumnResize(selectHead, selectCol, state.current, '✓');
-      hrow.append(selectHead);
-      const activeSort = sortFor(state.current);
-      headers.forEach((header, index) => {
-        const th = document.createElement('th');
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'th-sort';
-        button.title = activeSort?.header === header
-          ? `Sorted ${activeSort.dir === 'desc' ? 'descending' : 'ascending'}. Click to reverse.`
-          : `Sort by ${header}`;
-        if (activeSort?.header === header) button.setAttribute('aria-sort', activeSort.dir === 'desc' ? 'descending' : 'ascending');
-        const label = document.createElement('span');
-        label.className = 'th-label'; label.textContent = header;
-        const mark = document.createElement('span');
-        mark.className = 'sort-ind';
-        mark.textContent = activeSort?.header === header ? (activeSort.dir === 'desc' ? '▼' : '▲') : '↕';
-        button.append(label, mark);
-        button.addEventListener('click', () => applySort(header));
-        th.append(button);
-        enableColumnResize(th, colgroup.children[index + 1], state.current, header);
-        hrow.append(th);
-      });
-      syncTableWidth(grid);
-      const body = grid.createTBody();
-      const bodyRows = matrix.slice(1);
-      sortRows(state.current, headers, bodyRows).forEach(({ row, index }) => {
-        const tr = body.insertRow(); tr.dataset.index = index + 1;
-        const selection = tr.insertCell(); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.className = 'row-select'; selection.append(checkbox);
-        headers.forEach((header, columnIndex) => {
-          const cell = tr.insertCell();
-          const input = document.createElement(longFields.has(header) ? 'textarea' : 'input');
-          input.className = 'cell'; input.value = row[columnIndex] ?? ''; input.dataset.column = columnIndex;
-          input.addEventListener('input', () => { state.dirty.add(state.current); renderTabs(); });
-          const opener = document.createElement('a');
-          opener.className = 'url-open';
-          opener.target = '_blank';
-          opener.rel = 'noopener noreferrer';
-          opener.textContent = 'Open';
-          opener.title = 'Open URL in a new tab';
-          const wrap = document.createElement('div');
-          wrap.className = 'url-cell';
-          wrap.append(input, opener);
-          bindUrlOpener(input, opener);
-          cell.append(wrap);
-        });
-      });
-      filterRows(); updateCount();
+    function renderToolbar() {
+      const left = $('#toolbarLeft');
+      left.replaceChildren();
+      if (state.current === 'roles') {
+        left.append(
+          el('div', { class: 'kind-toggle', role: 'tablist', 'aria-label': 'Role type' },
+            ...[['both', 'Both'], ['applications', 'Applications'], ['jd-needed', 'JD needed']].map(([id, label]) =>
+              el('button', {
+                class: state.filters.kind === id ? 'active' : '',
+                text: label,
+                onclick: () => { state.filters.kind = id; saveUi(); render(); }
+              })
+            )
+          ),
+          el('input', { type: 'search', placeholder: 'Filter roles…', value: state.filters.query, oninput: event => { state.filters.query = event.target.value; saveUi(); renderListOnly(); } }),
+          (() => {
+            const select = el('select', { onchange: event => { state.filters.status = event.target.value; saveUi(); render(); } },
+              el('option', { value: '', text: 'All statuses' }),
+              ...allStatuses().map(status => el('option', { value: status, text: status, selected: status === state.filters.status }))
+            );
+            select.value = state.filters.status;
+            return select;
+          })(),
+          (() => {
+            const select = el('select', { onchange: event => { state.roleSort = event.target.value; saveUi(); render(); } },
+              ...ROLE_SORTS.map(([id, label]) => el('option', { value: id, text: label }))
+            );
+            select.value = state.roleSort;
+            return select;
+          })(),
+          el('button', { text: 'Add application', onclick: () => addRecord('applications.csv') }),
+          el('button', { text: 'Add JD needed', onclick: () => addRecord('jd-needed.csv') })
+        );
+        return;
+      }
+      if (state.current === 'resume-builds.csv') {
+        left.append(el('input', { type: 'search', placeholder: 'Filter builds…', value: state.filters.query, oninput: event => { state.filters.query = event.target.value; saveUi(); renderResumeBuilds(); } }));
+        return;
+      }
+      left.append(
+        el('input', { id: 'filter', type: 'search', placeholder: 'Filter rows…', value: state.filters.query, oninput: event => { state.filters.query = event.target.value; filterTable(); } }),
+        el('button', { text: 'Add row', onclick: () => addRecord(state.current) }),
+        el('button', { class: 'danger', text: 'Delete selected', onclick: deleteSelected })
+      );
     }
 
-    function harvest() {
-      if (!state.data.has(state.current)) return;
-      const matrix = state.data.get(state.current);
-      const incoming = [...($('#grid').tBodies[0]?.querySelectorAll('tr') || [])].map(tr => ({
+    function updateCount(text) { $('#count').textContent = text; }
+
+    function addRecord(table) {
+      const matrix = state.data.get(table);
+      matrix.push(matrix[0].map(() => ''));
+      state.dirty.add(table);
+      if (table === 'applications.csv') state.filters.kind = 'applications';
+      if (table === 'jd-needed.csv') state.filters.kind = 'jd-needed';
+      state.expanded.add(`${table}:${matrix.length - 1}`);
+      saveUi();
+      render();
+    }
+
+    function deleteRole(table, index, company) {
+      if (!confirm(`Delete ${company || 'this role'}? A backup is made when you save.`)) return;
+      state.data.get(table).splice(index, 1);
+      state.dirty.add(table);
+      render();
+    }
+
+    function addQuestion(job) {
+      const table = 'application-qa.csv';
+      const matrix = state.data.get(table);
+      const headers = matrix[0];
+      const existing = qaFor(job.job_id);
+      let max = 0;
+      for (const item of existing) {
+        const match = String(item.qa_id).match(/-q(\d+)$/i);
+        if (match) max = Math.max(max, Number(match[1]));
+      }
+      const row = headers.map(header => {
+        if (header === 'qa_id') return `${job.job_id || 'job'}-q${String(max + 1).padStart(2, '0')}`;
+        if (header === 'job_id') return job.job_id || '';
+        if (header === 'company') return job.company || '';
+        if (header === 'role') return job.role || '';
+        if (header === 'url') return job.url || job.canonical_url || '';
+        if (header === 'answer_status') return 'draft';
+        if (header === 'created_at' || header === 'updated_at') return today();
+        return '';
+      });
+      matrix.push(row);
+      state.dirty.add(table);
+      state.qaOpen.add(`${table}:${matrix.length - 1}`);
+      render();
+    }
+
+    function openResume(resumeId) {
+      state.current = 'resume-builds.csv';
+      state.focusResumeId = resumeId;
+      saveUi();
+      render();
+      requestAnimationFrame(() => document.querySelector('.card.focused')?.scrollIntoView({ block: 'center' }));
+    }
+
+    function renderRoleCard(record, table) {
+      const kind = table === 'applications.csv' ? 'application' : 'jd';
+      const key = `${table}:${record._index}`;
+      const open = state.expanded.has(key);
+      const questions = table === 'applications.csv' ? qaFor(record.job_id) : [];
+      const resume = table === 'applications.csv' ? resumeFor(record.job_id) : null;
+      const listingUrl = httpUrlFrom(record.url);
+      const officialUrl = httpUrlFrom(record.canonical_url);
+      const sameListing = listingUrl && officialUrl && listingUrl === officialUrl;
+      const card = el('article', { class: `card ${kind === 'jd' ? 'jd' : ''}${state.focusResumeId && resume?.resume_id === state.focusResumeId ? ' focused' : ''}` });
+      const titleButton = el('button', { class: 'card-open', type: 'button', onclick: () => { if (state.expanded.has(key)) state.expanded.delete(key); else state.expanded.add(key); renderListOnly(); } },
+        el('h3', { text: record.company || '(new role)' }),
+        el('div', { class: 'role', text: record.role || 'Untitled role' })
+      );
+      const pills = el('div', { class: 'chip-row' },
+        el('span', { class: `pill ${statusTone(record.status)}`, text: record.status || 'no status' }),
+        el('span', { class: 'pill kind', text: kind === 'jd' ? 'JD needed' : 'Application' })
+      );
+      card.append(el('div', { class: 'card-top' }, titleButton, pills));
+      const meta = [
+        [record.location, record.work_arrangement].filter(Boolean).join(' · '),
+        record.score ? `Score ${record.score}` : '',
+        record.first_seen ? `Seen ${record.first_seen}` : '',
+        record.compensation || ''
+      ].filter(Boolean).join(' · ');
+      if (meta) card.append(el('div', { class: 'meta-row', text: meta }));
+      const chips = el('div', { class: 'chip-row' },
+        listingUrl ? linkChip(sameListing || !officialUrl ? 'Open listing' : 'Open listing URL', listingUrl) : null,
+        officialUrl && !sameListing ? linkChip('Open official apply', officialUrl) : null,
+        table === 'applications.csv' ? el('button', { class: 'chip', text: questions.length ? `${questions.length} Q&A` : 'Add Q&A', onclick: () => { state.expanded.add(key); if (!questions.length && record.job_id) addQuestion(record); else renderListOnly(); } }) : null,
+        resume ? el('button', { class: 'chip link', text: `Resume · ${resume.profile_id || 'build'} · ${resume.review_status || 'draft'}${resume.match_score ? ` · ${resume.match_score}` : ''}`, onclick: () => openResume(resume.resume_id) }) : (table === 'applications.csv' ? el('button', { class: 'chip', text: 'No resume yet', onclick: () => { state.current = 'resume-builds.csv'; saveUi(); render(); } }) : null),
+        el('button', { class: 'chip', text: open ? 'Hide details' : 'Edit details', onclick: () => { if (open) state.expanded.delete(key); else state.expanded.add(key); renderListOnly(); } }),
+        el('button', { class: 'chip', text: 'Delete', onclick: () => deleteRole(table, record._index, record.company) })
+      );
+      card.append(chips);
+      if (open) {
+        const appFields = kind === 'application'
+          ? ['status','application_date','score','compensation','location','work_arrangement','track','source','verification','url','canonical_url','user_notes','fit_summary','gaps']
+          : ['status','location','url','source','failure_reason','checks_attempted','last_checked','notes'];
+        card.append(el('div', { class: 'details' }, ...appFields.filter(header => headersOf(table).includes(header)).map(header => fieldControl(table, record, header))));
+        if (kind === 'application') {
+          const box = el('div', { class: 'qa-list' },
+            el('div', { class: 'section-head' },
+              el('h2', { text: 'Application Q&A' }),
+              el('button', { text: 'Add question', onclick: () => addQuestion(record) })
+            )
+          );
+          if (!questions.length) box.append(el('div', { class: 'empty', text: 'No questions recorded for this role.' }));
+          for (const item of questions) {
+            const qaKey = `application-qa.csv:${item._index}`;
+            const details = el('details', { class: 'qa', open: state.qaOpen.has(qaKey) || item.answer_status === 'needs-user-input' });
+            details.addEventListener('toggle', () => { if (details.open) state.qaOpen.add(qaKey); else state.qaOpen.delete(qaKey); });
+            details.append(
+              el('summary', { text: `${item.question || 'Untitled question'} · ${item.answer_status || 'draft'}` }),
+              el('div', { class: 'qa-body' },
+                fieldControl('application-qa.csv', item, 'question', 'textarea'),
+                fieldControl('application-qa.csv', item, 'answer', 'textarea'),
+                fieldControl('application-qa.csv', item, 'evidence', 'textarea'),
+                fieldControl('application-qa.csv', item, 'answer_status'),
+                el('button', { class: 'danger', text: 'Remove question', onclick: () => {
+                  if (!confirm('Remove this question?')) return;
+                  state.data.get('application-qa.csv').splice(item._index, 1);
+                  state.dirty.add('application-qa.csv');
+                  render();
+                } })
+              )
+            );
+            box.append(details);
+          }
+          if (resume) {
+            box.append(el('div', { class: 'qa' },
+              el('strong', { text: 'Resume suggestion' }),
+              el('div', { class: 'meta-row', text: `${resume.profile_id || 'profile'} · ${resume.tailoring_level || 'level'} · ${resume.review_status || 'status'}` }),
+              el('div', { text: resume.change_summary || resume.notes || 'Linked resume build.' }),
+              el('div', { class: 'chip-row', style: 'margin-top:8px' },
+                el('button', { class: 'chip link', text: 'Open in Resume builds', onclick: () => openResume(resume.resume_id) })
+              )
+            ));
+          }
+          card.append(box);
+        }
+      }
+      return card;
+    }
+
+    function renderRoles() {
+      const view = $('#view');
+      const showApps = state.filters.kind !== 'jd-needed';
+      const showJd = state.filters.kind !== 'applications';
+      const apps = showApps ? visibleRoles('applications').map(record => ({ record, table: 'applications.csv' })) : [];
+      const jds = showJd ? visibleRoles('jd-needed').map(record => ({ record, table: 'jd-needed.csv' })) : [];
+      const items = sortRoleItems([...apps, ...jds]);
+      const list = el('div', { class: 'list' });
+      const title = state.filters.kind === 'jd-needed' ? 'JD needed' : state.filters.kind === 'applications' ? 'Applications' : 'Applications and JD needed';
+      const summary = showApps && showJd
+        ? `${apps.length} applications · ${jds.length} JD needed`
+        : `${items.length} shown`;
+      list.append(el('div', { class: 'section-head' }, el('h2', { text: title }), el('span', { text: summary })));
+      const cards = el('div', { class: 'cards' });
+      if (!items.length) cards.append(el('div', { class: 'empty', text: 'No roles match these filters.' }));
+      for (const { record, table } of items) cards.append(renderRoleCard(record, table));
+      list.append(cards);
+      view.replaceChildren(list);
+      updateCount(`${items.length} role${items.length === 1 ? '' : 's'} shown`);
+    }
+
+    function renderResumeBuilds() {
+      const view = $('#view');
+      const query = state.filters.query.trim().toLowerCase();
+      const records = recordsOf('resume-builds.csv')
+        .filter(record => !query || Object.values(record).some(value => String(value).toLowerCase().includes(query)))
+        .sort((a, b) => (parseTime(b.generated_at) || 0) - (parseTime(a.generated_at) || 0));
+      const list = el('div', { class: 'list' });
+      const cards = el('div', { class: 'cards' });
+      if (!records.length) cards.append(el('div', { class: 'empty', text: 'No resume builds match.' }));
+      for (const record of records) {
+        const focused = state.focusResumeId && record.resume_id === state.focusResumeId;
+        const card = el('article', { class: `card${focused ? ' focused' : ''}`, id: `resume-${record.resume_id}` });
+        card.append(
+          el('div', { class: 'card-top' },
+            el('div', {},
+              el('h3', { text: record.company || record.profile_id || record.resume_id || 'Resume build' }),
+              el('div', { class: 'role', text: record.role || (record.job_id ? record.job_id : 'Reusable baseline') })
+            ),
+            el('div', { class: 'chip-row' },
+              el('span', { class: `pill ${statusTone(record.review_status)}`, text: record.review_status || 'draft' }),
+              record.profile_id ? el('span', { class: 'pill', text: record.profile_id }) : null
+            )
+          ),
+          el('div', { class: 'meta-row', text: [record.generated_at, record.match_score ? `Match ${record.match_score}` : '', record.tailoring_level].filter(Boolean).join(' · ') }),
+          el('div', { text: record.change_summary || record.notes || '' }),
+          el('div', { class: 'chip-row' },
+            record.job_id ? el('button', { class: 'chip', text: 'View application', onclick: () => {
+              state.current = 'roles';
+              state.filters.kind = 'applications';
+              state.filters.query = record.job_id;
+              const match = recordsOf('applications.csv').find(row => row.job_id === record.job_id);
+              if (match) state.expanded.add(`applications.csv:${match._index}`);
+              saveUi();
+              render();
+            } }) : null,
+            linkChip('Open source JD', httpUrlFrom(record.source_jd_url))
+          ),
+          el('div', { class: 'details' },
+            ...['review_status','profile_id','match_score','tailoring_level','html_path','pdf_path','change_summary','unsupported_requirements','notes']
+              .filter(header => headersOf('resume-builds.csv').includes(header))
+              .map(header => fieldControl('resume-builds.csv', record, header))
+          )
+        );
+        cards.append(card);
+      }
+      list.append(cards);
+      view.replaceChildren(list);
+      updateCount(`${records.length} build${records.length === 1 ? '' : 's'}`);
+    }
+
+    function enableColumnResize(th, col, tableName, header) {
+      const handle = el('span', { class: 'col-resizer', role: 'separator', title: 'Drag to resize column' });
+      th.append(handle);
+      handle.addEventListener('pointerdown', event => {
+        if (event.button) return;
+        event.preventDefault();
+        handle.setPointerCapture(event.pointerId);
+        const startX = event.clientX;
+        const startWidth = col.getBoundingClientRect().width;
+        document.body.classList.add('col-resizing');
+        const move = ev => {
+          col.style.width = `${Math.max(56, Math.round(startWidth + ev.clientX - startX))}px`;
+          const total = [...th.closest('table').querySelectorAll('col')].reduce((sum, item) => sum + (parseInt(item.style.width, 10) || 0), 0);
+          if (total) th.closest('table').style.width = `${total}px`;
+        };
+        const stop = ev => {
+          handle.removeEventListener('pointermove', move);
+          handle.removeEventListener('pointerup', stop);
+          document.body.classList.remove('col-resizing');
+          try { handle.releasePointerCapture(ev.pointerId); } catch { /* already released */ }
+          saveWidth(tableName, header, parseInt(col.style.width, 10));
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', stop);
+      });
+    }
+
+    function harvestTable() {
+      const grid = $('#grid');
+      const name = grid?.dataset.table;
+      if (!name || !state.data.has(name) || !grid.tBodies[0]) return;
+      const matrix = state.data.get(name);
+      const incoming = [...grid.tBodies[0].querySelectorAll('tr')].map(tr => ({
         index: Number(tr.dataset.index),
         row: [...tr.querySelectorAll('.cell')].map(input => input.value)
       }));
       incoming.sort((a, b) => a.index - b.index);
-      state.data.set(state.current, [matrix[0], ...incoming.map(item => item.row)]);
+      state.data.set(name, [matrix[0], ...incoming.map(item => item.row)]);
     }
 
-    function filterRows() {
-      const query = $('#filter').value.trim().toLowerCase();
-      $('#grid').tBodies[0]?.querySelectorAll('tr').forEach(tr => {
-        const searchable = [...tr.querySelectorAll('.cell')].map(input => input.value).join(' ').toLowerCase();
-        tr.classList.toggle('hidden', Boolean(query && !searchable.includes(query)));
+    function renderTable(name) {
+      harvestTable();
+      const matrix = state.data.get(name) || [[]];
+      const headers = matrix[0] || [];
+      const savedWidths = widthsFor(name);
+      const grid = el('table', { id: 'grid', dataset: { table: name } });
+      const colgroup = el('colgroup');
+      const selectCol = el('col');
+      selectCol.style.width = `${savedWidths['✓'] || 42}px`;
+      colgroup.append(selectCol);
+      headers.forEach(header => {
+        const col = el('col');
+        col.style.width = `${savedWidths[header] || defaultWidth(header)}px`;
+        colgroup.append(col);
       });
-      updateCount();
+      grid.append(colgroup);
+      const thead = grid.createTHead();
+      const hrow = thead.insertRow();
+      const selectHead = el('th', {}, el('span', { class: 'th-label', text: '✓' }));
+      enableColumnResize(selectHead, selectCol, name, '✓');
+      hrow.append(selectHead);
+      const active = sortFor(name);
+      headers.forEach((header, index) => {
+        const th = el('th');
+        const button = el('button', {
+          class: 'th-sort',
+          type: 'button',
+          title: active?.header === header ? `Sorted ${active.dir}. Click to reverse.` : `Sort by ${header}`,
+          onclick: () => {
+            harvestTable();
+            const current = sortFor(name);
+            saveSort(name, header, current?.header === header && current.dir === 'asc' ? 'desc' : current?.header === header ? 'asc' : defaultDir(header));
+            render();
+          }
+        }, el('span', { class: 'th-label', text: header }), el('span', { class: 'sort-ind', text: active?.header === header ? (active.dir === 'desc' ? '▼' : '▲') : '↕' }));
+        if (active?.header === header) button.setAttribute('aria-sort', active.dir === 'desc' ? 'descending' : 'ascending');
+        th.append(button);
+        enableColumnResize(th, colgroup.children[index + 1], name, header);
+        hrow.append(th);
+      });
+      const total = [...colgroup.children].reduce((sum, col) => sum + (parseInt(col.style.width, 10) || 0), 0);
+      if (total) grid.style.width = `${total}px`;
+      const body = grid.createTBody();
+      sortRows(name, headers, matrix.slice(1)).forEach(({ row, index }) => {
+        const tr = body.insertRow();
+        tr.dataset.index = index + 1;
+        const selection = tr.insertCell();
+        selection.append(el('input', { type: 'checkbox', class: 'row-select' }));
+        headers.forEach((header, columnIndex) => {
+          const cell = tr.insertCell();
+          const input = el(LONG_FIELDS.has(header) ? 'textarea' : 'input', { class: 'cell' });
+          input.value = row[columnIndex] ?? '';
+          input.addEventListener('input', () => { state.dirty.add(name); renderTabs(); $('#save').disabled = false; });
+          const opener = el('a', { class: 'url-open', target: '_blank', rel: 'noopener noreferrer', text: 'Open' });
+          const href = httpUrlFrom(input.value);
+          if (href) opener.href = href; else opener.hidden = true;
+          input.addEventListener('input', () => {
+            const next = httpUrlFrom(input.value);
+            if (next) { opener.href = next; opener.hidden = false; } else { opener.removeAttribute('href'); opener.hidden = true; }
+          });
+          cell.append(el('div', { class: 'url-cell' }, input, opener));
+        });
+      });
+      $('#view').replaceChildren(el('div', { class: 'table-wrap' }, grid));
+      filterTable();
     }
 
-    function updateCount() {
-      const rows = [...($('#grid').tBodies[0]?.rows || [])];
-      const visible = rows.filter(row => !row.classList.contains('hidden')).length;
+    function filterTable() {
+      const query = ($('#filter')?.value ?? state.filters.query).trim().toLowerCase();
+      const rows = [...($('#grid')?.tBodies[0]?.rows || [])];
+      rows.forEach(tr => {
+        const searchable = [...tr.querySelectorAll('.cell')].map(input => input.value).join(' ').toLowerCase();
+        tr.hidden = Boolean(query && !searchable.includes(query));
+      });
+      const visible = rows.filter(row => !row.hidden).length;
       const spec = sortFor(state.current);
-      const sortNote = spec ? ` · ${spec.header} ${spec.dir === 'desc' ? '↓' : '↑'}` : '';
-      $('#count').textContent = `${visible} of ${rows.length} row${rows.length === 1 ? '' : 's'}${sortNote}`;
+      updateCount(`${visible} of ${rows.length} row${rows.length === 1 ? '' : 's'}${spec ? ` · ${spec.header} ${spec.dir === 'desc' ? '↓' : '↑'}` : ''}`);
     }
 
-    async function writeText(handle, text) {
-      const writable = await handle.createWritable(); await writable.write(text); await writable.close();
-    }
-
-    async function saveCurrent() {
-      harvest(); setStatus(`Saving ${state.current}…`, 'working');
-      const handle = await state.directory.getFileHandle(state.current);
-      const previous = await (await handle.getFile()).text();
-      const backups = await state.directory.getDirectoryHandle('backups', { create: true });
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backup = await backups.getFileHandle(`${state.current.replace('.csv','')}-${stamp}.csv`, { create: true });
-      await writeText(backup, previous);
-      await writeText(handle, toCsv(state.data.get(state.current)));
-      state.dirty.delete(state.current); renderTabs();
-      setStatus(`Saved ${state.current}; backup created.`);
-    }
-
-    $('#openFolder').onclick = async () => {
-      try { state.directory = await window.showDirectoryPicker({ mode: 'readwrite' }); await loadAll(); }
-      catch (error) { if (error.name !== 'AbortError') setStatus(error.message, 'error'); }
-    };
-    $('#reload').onclick = async () => {
-      if (state.dirty.size && !confirm('Discard unsaved changes and reload the CSV files?')) return;
-      try { await loadAll(); } catch (error) { setStatus(error.message, 'error'); }
-    };
-    $('#filter').oninput = filterRows;
-    $('#addRow').onclick = () => {
-      harvest(); const matrix = state.data.get(state.current); matrix.push(matrix[0].map(() => '')); state.dirty.add(state.current); renderTabs(); renderTable();
-      $('#grid').tBodies[0].querySelector('tr')?.scrollIntoView({ block:'center' });
-    };
-    $('#deleteRows').onclick = () => {
+    function deleteSelected() {
       const selected = [...document.querySelectorAll('.row-select:checked')];
       if (!selected.length || !confirm(`Delete ${selected.length} selected row(s)? A backup is made when you save.`)) return;
-      selected.forEach(box => box.closest('tr').remove()); state.dirty.add(state.current); harvest(); renderTabs(); updateCount();
-    };
-    $('#save').onclick = async () => { try { await saveCurrent(); } catch (error) { setStatus(error.message, 'error'); } };
-
-    if (!('showDirectoryPicker' in window)) {
-      $('#openFolder').disabled = true;
-      $('#notice').innerHTML = 'This browser does not support editable local folders. Open this page in a current Chrome or Edge browser.';
-      setStatus('File System Access API unavailable.', 'error');
+      selected.forEach(box => box.closest('tr').remove());
+      state.dirty.add(state.current);
+      harvestTable();
+      renderTabs();
+      filterTable();
+      $('#save').disabled = false;
     }
+
+    function renderListOnly() {
+      if (state.current === 'roles') renderRoles();
+      else if (state.current === 'resume-builds.csv') renderResumeBuilds();
+    }
+
+    function render() {
+      renderTabs();
+      renderToolbar();
+      if (state.current === 'roles') renderRoles();
+      else if (state.current === 'resume-builds.csv') renderResumeBuilds();
+      else renderTable(state.current);
+      $('#save').disabled = state.dirty.size === 0;
+    }
+
+    $('#reload').onclick = async () => {
+      if (state.dirty.size && !confirm('Discard unsaved changes and reload?')) return;
+      try { await loadAll(); } catch (error) { setStatus(error.message, 'error'); }
+    };
+    $('#save').onclick = async () => {
+      try {
+        if (['search-runs.csv', 'search-sources.csv'].includes(state.current)) harvestTable();
+        await saveAll();
+      } catch (error) { setStatus(error.message, 'error'); }
+    };
+    $('#openFolder').onclick = async () => {
+      try {
+        state.directory = await window.showDirectoryPicker({ mode: 'readwrite' });
+        state.source = 'folder';
+        await loadAll();
+      } catch (error) {
+        if (error.name !== 'AbortError') setStatus(error.message, 'error');
+      }
+    };
+
+    loadUi();
     renderTabs();
+    (async () => {
+      if (await detectApi()) {
+        state.source = 'api';
+        try { await loadAll(); }
+        catch (error) {
+          $('#notice').className = 'notice warn';
+          $('#notice').textContent = `Could not load workspace data: ${error.message}`;
+          setStatus(error.message, 'error');
+        }
+        return;
+      }
+      $('#openFolder').hidden = false;
+      $('#notice').className = 'notice warn';
+      $('#notice').innerHTML = 'This page is not being served from the tracker server, so it cannot see the workspace <strong>data</strong> folder automatically. Run <code>npm run tracker</code> or choose the folder.';
+      setStatus('Waiting for a data folder.');
+      if (!('showDirectoryPicker' in window)) {
+        $('#openFolder').disabled = true;
+        setStatus('File System Access API unavailable.', 'error');
+      }
+    })();
   </script>
 </body>
 </html>

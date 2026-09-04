@@ -1,6 +1,6 @@
 # Architecture
 
-Portable Job Search separates candidate-owned data from reusable workflow code.
+Jobscout separates candidate-owned data from reusable workflow code.
 
 ## Workflow layer
 
@@ -18,7 +18,7 @@ The skill coordinates five stages:
 
 CSV files under `data/` are the local durable store. They are ignored by Git because they can contain personal history. Header-only defaults live under `templates/data/` and are copied by `npm run init`.
 
-`tracker/index.html` is a local browser interface over these CSVs. It uses the File System Access API and never uploads data.
+`tracker/index.html` is a local browser interface over these CSVs. `npm run tracker` serves the page and the workspace `data/` files on localhost so a refresh reloads automatically. The File System Access folder picker remains a fallback when the page is opened without that server. Nothing is uploaded.
 
 ## Resume layer
 
