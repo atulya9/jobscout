@@ -4,7 +4,7 @@
   "private": true,
   "description": "A local, agent-independent workflow for verified job discovery, tracking, application Q&A, and evidence-grounded resume tailoring.",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "engines": {
     "node": ">=20"
   },
