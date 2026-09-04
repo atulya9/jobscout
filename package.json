@@ -1,6 +1,6 @@
 {
   "name": "portable-job-search",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A local, agent-independent workflow for verified job discovery, tracking, application Q&A, and evidence-grounded resume tailoring.",
   "type": "module",

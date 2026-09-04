@@ -4,7 +4,7 @@ Portable Job Search separates candidate-owned data from reusable workflow code.
 
 ## Workflow layer
 
-The canonical Agent Skill is `.agents/skills/job-search/SKILL.md`. OpenCode, Gemini/Antigravity, Grok Build, and Claude Code discover this workflow through their workspace-level configuration or a small discovery shim.
+The canonical Agent Skill is `.agents/skills/job-search/SKILL.md`. Codex, Cursor, Pi, OpenCode, Gemini/Antigravity, Grok Build, and Claude Code discover this workflow through native `.agents/skills` support, workspace-level configuration, or a small discovery shim.
 
 The skill coordinates five stages:
 
@@ -29,6 +29,8 @@ Profiles under `resumes/profiles/` select approved summaries, skills, projects, 
 ## Browser layer
 
 Chrome DevTools MCP is the default for authenticated portals and already-open tabs. Playwright MCP extension mode is the fallback. Public employer and ATS pages are fetched directly first. Only one browser controller operates a tab at a time.
+
+Most harnesses connect to both browser servers through their native project-level MCP configuration. Pi is the exception: it loads the community `pi-mcp-adapter` package from `.pi/settings.json`, and the adapter reads the shared root `.mcp.json`. The dependency is explicit because Pi does not include an MCP client in its core.
 
 ## Safety boundaries
 

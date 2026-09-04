@@ -1,0 +1,4 @@
+{
+  "packages": ["npm:pi-mcp-adapter"],
+  "enableSkillCommands": true
+}
