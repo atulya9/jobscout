@@ -20,6 +20,7 @@ data/*.tmp-*
 
 # Local and generated project artifacts
 .DS_Store
+.playwright-mcp/
 node_modules/
 dist/*
 !dist/.gitkeep

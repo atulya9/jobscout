@@ -17,20 +17,19 @@ The tracker is intentionally local and portable. CSV is the durable format; `tra
 - `resumes/templates/`: portable HTML/CSS resume renderer.
 - `resumes/generated/`: generated baseline and job-specific HTML/PDF artifacts plus manifests.
 - `resumes/tailored/`: user-maintained tailored source resumes retained for reference.
-- `data/applications.csv`: one row per unique role, including roles already applied/rejected/expired.
-- `data/jd-needed.csv`: discovered roles whose complete JD could not be read.
+- `data/applications.csv`: one row per unique role. `jd_verified=true` when the full JD was read; `jd_verified=false` when it was not. Status is one of `New`, `Applied`, `In process`, `Rejected`, `Skipped`, `Broken`. `role_type` is one of `Full Time`, `Contract`, `Part Time`, `Internship`, `Freelance`, or blank when unknown. `updated_at` is set automatically when the user edits a row.
 - `data/application-qa.csv`: one row per application question and drafted answer.
 - `data/application-answers/<job_id>.md`: copyable long-form Q&A for one role.
 - `data/resume-builds.csv`: one row per reusable or job-specific resume decision and generated artifact.
 - `data/search-runs.csv`: audit record of each daily search.
-- `data/search-sources.csv`: source roster, retrieval method, and latest health.
+- `data/search-sources.csv`: source roster, `base_url`, retrieval method, and latest health.
 - `data/backups/`: automatic pre-write CSV backups.
 
 ## Status ownership
 
-The user owns `status`, `application_date`, and `user_notes` in `applications.csv`. Agents may populate them only from explicit user statements. Never infer `applied` from opening an application form.
+The user owns `status`, `application_date`, and `user_notes` in `applications.csv`. Agents may populate them only from explicit user statements. Never infer `Applied` from opening an application form. `updated_at` is maintained by the tracker UI on user edits.
 
-Recommended status values: `new`, `reviewing`, `applied`, `interviewing`, `offer`, `rejected`, `withdrawn`, `expired`, `bad-match`, and `duplicate`.
+Allowed status values: `New`, `Applied`, `In process`, `Rejected`, `Skipped`, and `Broken`.
 
 Question answer states: `draft`, `ready`, `needs-user-input`, `submitted`, and `retired`.
 

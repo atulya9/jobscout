@@ -10,7 +10,7 @@ Use this skill as a self-contained daily workflow. Do not depend on prior chat h
 ## Start every run
 
 1. Resolve the workspace root as the directory containing `AGENTS.md` and `data/`.
-2. Read `AGENTS.md`, `config/preferences.json`, `resumes/content/resume-content.json`, all current rows in `data/applications.csv`, `data/jd-needed.csv`, `data/resume-builds.csv`, and `data/search-sources.csv`. Treat the structured evidence bank as the candidate source of truth; inspect source resumes only when updating or validating that bank.
+2. Read `AGENTS.md`, `config/preferences.json`, `resumes/content/resume-content.json`, all current rows in `data/applications.csv`, `data/resume-builds.csv`, and `data/search-sources.csv`. Treat the structured evidence bank as the candidate source of truth; inspect source resumes only when updating or validating that bank.
 3. If the evidence bank, source resume, or essential preferences are missing, stop and ask only for those missing inputs. Otherwise begin immediately.
 4. Create a run row in `data/search-runs.csv` with a stable ID such as `run-YYYY-MM-DD-HHMMSS` and status `running`.
 5. Treat “Run today's job search” and close variants as direct invocation. Never ask the user to restate the workflow. A new conversation can start with only that phrase because all durable context lives here.
@@ -27,11 +27,11 @@ Search in this order:
 2. Chrome DevTools MCP connected to the user's running Chrome for authenticated portals and already-open tabs.
 3. Playwright MCP extension mode as the browser fallback when Chrome DevTools cannot expose or operate a page.
 4. Search snippets, alternative canonical employer/ATS pages, and structured data when the primary page fails.
-5. If the full JD still cannot be read, add it to `data/jd-needed.csv`; never silently discard it.
+5. If the full JD still cannot be read, add it to `data/applications.csv` with `jd_verified=false`; never silently discard it.
 
 Use only one browser-control MCP on a tab at a time. Prefer Chrome DevTools for an existing logged-in session and Playwright extension mode as fallback. Do not launch an isolated browser for a source that requires the user's authenticated state unless the user explicitly accepts signing in again.
 
-For every source, record `ok`, `partial`, `blocked`, `login-required`, or `not-checked` in `data/search-sources.csv`, with a concise failure note. Include blocked sources in the final report so the user can search them manually.
+For every source, open its `base_url` from `data/search-sources.csv` and record `ok`, `partial`, `blocked`, `login-required`, or `not-checked`, with a concise failure note. Include blocked sources in the final report so the user can search them manually. Rows without a `base_url` (employer career sites, VC boards) are catch-alls: check the relevant company or portfolio pages discovered during the run.
 
 ## Candidate fit
 
@@ -69,9 +69,11 @@ Before adding a role:
 1. Prefer the canonical employer or ATS URL over aggregator URLs.
 2. Confirm the posting is open and the application action resolves.
 3. Confirm the candidate can apply from an allowed location. If uncertain, say so.
-4. Extract title, company, location, work arrangement, seniority, compensation if stated, source, canonical URL, ATS job ID, responsibilities, must-haves, and application questions.
-5. Deduplicate against all tracker rows, including applied/rejected/expired roles, by normalized canonical URL, ATS job ID, and normalized `company + role + location`. Update `last_verified` instead of adding a duplicate.
+4. Extract title, company, location, work arrangement, role type (`Full Time`, `Contract`, `Part Time`, `Internship`, or `Freelance` when the posting states it), seniority, compensation if stated, source, canonical URL, ATS job ID, responsibilities, must-haves, and application questions.
+5. Deduplicate against every row in `data/applications.csv`, including applied/rejected/skipped roles and unread JDs, by normalized canonical URL, ATS job ID, and normalized `company + role + location`. Update `last_verified` and `updated_at` instead of adding a duplicate.
 6. Never overwrite user-maintained `status`, `application_date`, or `user_notes` with blanks or inferred values.
+7. Set `jd_verified=true` only when the full JD was read. Otherwise set `jd_verified=false` and record `failure_reason` / `checks_attempted`.
+8. Use status values exactly: `New`, `Applied`, `In process`, `Rejected`, `Skipped`, `Broken`. Agents may set `New` on first insert; later status changes belong to the user unless they state them.
 
 Use these verification labels exactly: `chrome-verified`, `web-verified`, `jd-needed`, `blocked`, and `unverified`.
 
@@ -90,14 +92,14 @@ The tracker page reads `data/application-qa.csv`, so every saved question and an
 
 ## Finish the run
 
-1. Upsert verified roles into `data/applications.csv`, unreadable roles into `data/jd-needed.csv`, and any generated or reused resume decisions into `data/resume-builds.csv`.
+1. Upsert every role into `data/applications.csv` (`jd_verified=true` when the JD was read, `jd_verified=false` when it was not) and any generated or reused resume decisions into `data/resume-builds.csv`.
 2. Update every checked source and complete the run row with counts and status `completed` or `partial`.
 3. Run:
 
    `node .agents/skills/job-search/scripts/tracker.mjs validate`
 
 4. Present a ranked shortlist with role, company, fit score, location/eligibility, why it fits, material gaps, verification method, and direct application URL.
-5. Separately list `JD needed`, blocked sources, duplicates skipped, and sources checked.
+5. Separately list unread JDs (`jd_verified=false`), blocked sources, duplicates skipped, and sources checked.
 6. Keep the report actionable. Never call a role verified when only a search snippet was available.
 
 Read [data-model.md](references/data-model.md) for file contracts and [platforms.md](references/platforms.md) for the retrieval matrix.

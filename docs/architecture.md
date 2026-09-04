@@ -11,7 +11,7 @@ The skill coordinates five stages:
 1. Load candidate preferences, resume evidence, tracker history, and source health.
 2. Search every enabled portal using direct retrieval, an authenticated Chrome session, or a Playwright extension fallback.
 3. Verify availability and location eligibility, score fit, and deduplicate against all previous roles.
-4. Capture unreadable JDs and application questions rather than silently discarding them.
+4. Capture unreadable JDs (`jd_verified=false` on the applications row) and application questions rather than silently discarding them.
 5. Select or generate an evidence-grounded resume and record the result without submitting an application.
 
 ## Data layer

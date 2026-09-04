@@ -10,12 +10,11 @@ const dataDir = path.join(workspace, 'data');
 const templateDataDir = path.join(workspace, 'templates', 'data');
 
 const schemas = {
-  applications: ['job_id','company','role','track','location','work_arrangement','compensation','url','canonical_url','ats_job_id','source','first_seen','last_verified','application_date','status','verification','score','fit_summary','gaps','user_notes'],
-  'jd-needed': ['job_id','company','role','location','url','source','failure_reason','checks_attempted','status','first_seen','last_checked','notes'],
+  applications: ['job_id','company','role','role_type','track','location','work_arrangement','compensation','url','canonical_url','ats_job_id','source','first_seen','last_verified','application_date','updated_at','status','jd_verified','verification','score','fit_summary','gaps','user_notes','failure_reason','checks_attempted'],
   'application-qa': ['qa_id','job_id','company','role','url','question','answer','evidence','answer_status','created_at','updated_at'],
   'resume-builds': ['resume_id','job_id','company','role','profile_id','source_jd_url','generated_at','html_path','pdf_path','tailoring_level','match_score','change_summary','unsupported_requirements','review_status','notes'],
   'search-runs': ['run_id','started_at','completed_at','query_date','status','portals_checked','roles_found','roles_added','jd_needed_added','duplicates_skipped','blocked_sources','notes'],
-  'search-sources': ['source','category','default_method','fallback_method','requires_login','enabled','last_checked','status','notes']
+  'search-sources': ['source','base_url','category','default_method','fallback_method','requires_login','enabled','last_checked','status','notes']
 };
 
 const aliases = Object.fromEntries(Object.keys(schemas).flatMap(name => [[name, name], [`${name}.csv`, name]]));
@@ -88,10 +87,9 @@ function normalized(value) {
 function sameRecord(table, left, right) {
   const hasEqual = field => normalized(left[field]) && normalized(left[field]) === normalized(right[field]);
   if (table === 'applications') {
-    return hasEqual('job_id') || hasEqual('canonical_url') || hasEqual('ats_job_id') ||
+    return hasEqual('job_id') || hasEqual('canonical_url') || hasEqual('ats_job_id') || hasEqual('url') ||
       (hasEqual('company') && hasEqual('role') && hasEqual('location'));
   }
-  if (table === 'jd-needed') return hasEqual('job_id') || hasEqual('url');
   if (table === 'application-qa') return hasEqual('qa_id') || (hasEqual('job_id') && hasEqual('question'));
   if (table === 'resume-builds') return hasEqual('resume_id') || (hasEqual('job_id') && hasEqual('profile_id'));
   if (table === 'search-runs') return hasEqual('run_id');

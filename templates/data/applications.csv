@@ -1,1 +1,1 @@
-job_id,company,role,track,location,work_arrangement,compensation,url,canonical_url,ats_job_id,source,first_seen,last_verified,application_date,status,verification,score,fit_summary,gaps,user_notes
+job_id,company,role,role_type,track,location,work_arrangement,compensation,url,canonical_url,ats_job_id,source,first_seen,last_verified,application_date,updated_at,status,jd_verified,verification,score,fit_summary,gaps,user_notes,failure_reason,checks_attempted

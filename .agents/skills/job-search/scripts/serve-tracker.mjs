@@ -13,7 +13,6 @@ const requestedPort = Number(process.env.TRACKER_PORT || 4173);
 const maxBody = 20 * 1024 * 1024;
 const allowedTables = new Set([
   'applications.csv',
-  'jd-needed.csv',
   'application-qa.csv',
   'resume-builds.csv',
   'search-runs.csv',

@@ -76,7 +76,7 @@ From the workspace root, run:
 npm run tracker
 ```
 
-Open `http://127.0.0.1:4173`. Jobscout reads and writes this workspace's `data/` directory, so a refresh reloads the latest CSVs without choosing a folder. The Roles page lists applications and unread JDs together; Q&A expands on each application, and resume suggestions jump to the matching resume-build record. Search runs and source health stay on their own tabs. Saving makes a timestamped backup first.
+Open `http://127.0.0.1:4173`. Jobscout reads and writes this workspace's `data/` directory, so a refresh reloads the latest CSVs without choosing a folder. Roles live in one `applications.csv` file: `jd_verified` marks whether the JD was read. Click a card for the full editable record. Search runs and source health stay on their own tabs. Saving makes a timestamped backup first.
 
 If you open `tracker/index.html` without the server, use **Open data folder** and select this workspace's `data/` directory. That fallback needs Chrome or Edge.
 
